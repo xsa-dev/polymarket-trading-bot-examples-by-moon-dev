@@ -1,0 +1,10 @@
+# 🌙 Moon Dev - NEVER let secrets touch GitHub
+.env
+.env.*
+*.env
+
+# junk
+__pycache__/
+*.pyc
+.DS_Store
+data/
