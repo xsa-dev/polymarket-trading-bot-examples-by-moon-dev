@@ -30,8 +30,6 @@ whether you paid little enough for it.
   money). That basically never happens. The evolution: pay up to fair value minus an
   8-cent edge buffer. More fills, still positive expectancy — if the corridor rate holds.
 
-Full numbers in [RESEARCH.md](RESEARCH.md).
-
 ## The rules it lives by
 
 - Acts once per 15-minute window, only in the first 90 seconds of its final third.

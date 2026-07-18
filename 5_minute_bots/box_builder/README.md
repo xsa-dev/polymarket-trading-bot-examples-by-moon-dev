@@ -21,7 +21,7 @@ went breakeven-to-negative in my logs. The killer was adverse selection: passive
 arrive precisely when your side is dying (losing fills averaged entry 0.647 vs 0.736 for
 winners — a measured ~9c of poison). A completed box is direction-neutral, so that same
 panic-seller dumping a dying side cheap is now *building your box*. The poison becomes
-the product. Full numbers in [RESEARCH.md](RESEARCH.md).
+the product.
 
 ## The rules it lives by
 

@@ -36,9 +36,8 @@ Got questions? Join the Zoom call: **https://moondev.com/t/polymarket-github**
 ```
 
 Every bot folder contains:
-- **README.md** — what the strategy does, in plain english, and why it exists
-- **RESEARCH.md** — the actual data mining that produced the idea (real logs, real numbers,
-  zero synthetic data — that's a hard rule around here)
+- **README.md** — what the strategy does, in plain english, why it exists, and the real
+  numbers behind it (zero synthetic data — that's a hard rule around here)
 - **the bot code** — heavily commented, logs every window (entries AND skips) to CSV
 
 ## Setup (the honest version)

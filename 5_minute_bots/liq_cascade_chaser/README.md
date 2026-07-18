@@ -23,7 +23,7 @@ I graded every signal my March fleet ever logged against real candles:
 And the thing that lost the money was never the signal — it was the **stink-bid entry**
 (fills won just 34.2%, because a discount bid only fills when the market is moving
 against you). So this bot's entire innovation is deleting that: it pays the taker fee and
-buys the winner *while it's winning*. Full numbers in [RESEARCH.md](RESEARCH.md).
+buys the winner *while it's winning*.
 
 ## The rules it lives by
 

@@ -24,8 +24,6 @@ order in the first 20 seconds.
 - Entry discipline matters more than the signal: ~95% of late-window stink bids in my old
   logs got cancelled unfilled — so this bot enters at the window open, where fills exist.
 
-Full numbers in [RESEARCH.md](RESEARCH.md).
-
 ## The rules it lives by
 
 - 4+ consecutive same-direction windows (graded by the actual Polymarket oracle, with a
