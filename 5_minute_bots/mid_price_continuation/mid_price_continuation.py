@@ -414,6 +414,7 @@ def fresh_state():
     return {"slug": None, "tokens": None, "strike": None, "spot": None, "itm_pct": 0.0,
             "side": None, "bid": None, "ask": None, "entered": False, "placed": False,
             "shares": None, "token_id": None, "action": None, "signal_late": False,
+            "why": "", "last_logged_action": None, "last_time_left": None,
             "last_check": 0.0}
 
 
@@ -443,27 +444,48 @@ def finalize_window(st, window_ts):
         "side": st["side"] or "",
         "best_bid": "" if st["bid"] is None else f"{st['bid']:.4f}",
         "best_ask": "" if st["ask"] is None else f"{st['ask']:.4f}",
-        "minutes_left": "",  # filled below at call time — kept for column stability
+        "minutes_left": "" if st.get("last_time_left") is None else f"{st['last_time_left'] / 60:.2f}",
         "action": action, "paper": int(PAPER_MODE)})
 
 
 # ============================================================================
 # 🌙 MOON DEV - THE HUNT (one BTC tick)
 # ============================================================================
+def note_skip(st, action, detail):
+    """🌙 Moon Dev - set the skip action + the live WHY line; event-log each NEW
+    reason once per window so the dashboard always says why we're not in."""
+    st["action"] = action
+    st["why"] = detail
+    if st["last_logged_action"] != action:
+        st["last_logged_action"] = action
+        log_event(detail, "yellow")
+
+
 def hunt(st, time_left):
     """🌙 Moon Dev - the mined cell: leading side, 0.40-0.55, 120-300s left. Nothing else."""
-    if st["entered"] or st["placed"] or st["tokens"] is None or st["strike"] is None or st["spot"] is None:
+    if st["entered"] or st["placed"]:
+        return
+    if st["tokens"] is None or st["strike"] is None or st["spot"] is None:
+        st["why"] = "waiting for market/strike/spot data..."
         return
 
+    st["last_time_left"] = time_left
     st["itm_pct"] = (st["spot"] - st["strike"]) / st["strike"] * 100.0
     leading = "Up" if st["itm_pct"] >= 0 else "Down"
-    if abs(st["itm_pct"]) < MIN_ITM_PCT:
-        return  # NO_SIGNAL (so far) — keep watching
+    mag = abs(st["itm_pct"])
+
+    if mag < MIN_ITM_PCT:
+        st["why"] = f"💤 no signal: |itm| {mag:.3f}% < {MIN_ITM_PCT}% gate — {leading} barely ahead"
+        return
 
     if time_left < TIME_BAND[0]:
         st["signal_late"] = True
+        if st["action"] is None:
+            note_skip(st, "TOO_LATE",
+                      f"⏰ {leading} leading {mag:.3f}% but only {time_left}s left (< {TIME_BAND[0]}s) — too late")
         return
     if time_left > TIME_BAND[1]:
+        st["why"] = f"⏰ {leading} leading {mag:.3f}% but {time_left}s left — above the {TIME_BAND[1]}s band"
         return
 
     now = time.time()
@@ -472,6 +494,7 @@ def hunt(st, time_left):
     st["last_check"] = now
 
     if S["halted"]:
+        st["why"] = "🛑 daily stop hit — watching only"
         return
 
     st["side"] = leading
@@ -479,19 +502,25 @@ def hunt(st, time_left):
     bid, ask, depth = get_book(st["token_id"])
     st["bid"], st["ask"] = bid, ask
     if ask is None:
-        return  # empty book, re-check next tick
+        st["why"] = f"📖 {leading} leading {mag:.3f}% — empty book, re-checking"
+        return
 
     if ask > PRICE_BAND[1]:
-        st["action"] = "ASK_TOO_HIGH"   # market caught up — the dead zone. Never chase.
+        note_skip(st, "ASK_TOO_HIGH",
+                  f"⏭️ {leading} ask ${ask:.3f} > ${PRICE_BAND[1]:.2f} cap — dead zone, no chase (itm {mag:.3f}%)")
         return
     if ask < PRICE_BAND[0]:
-        st["action"] = "ASK_TOO_LOW"
+        note_skip(st, "ASK_TOO_LOW",
+                  f"⏭️ {leading} ask ${ask:.3f} < ${PRICE_BAND[0]:.2f} floor (itm {mag:.3f}%)")
         return
 
     shares = calc_shares(USD_SIZE, ask)
     if depth < shares:
-        st["action"] = "NO_FILL"        # book too thin for our size — keep watching
+        note_skip(st, "NO_FILL",
+                  f"⏭️ {leading} ask ${ask:.3f} in band but depth {depth:.0f} < {shares:.0f} shares — thin book")
         return
+
+    st["why"] = f"🚀 {leading} ask ${ask:.3f} in the {PRICE_BAND[0]:.2f}-{PRICE_BAND[1]:.2f} band — FIRING"
 
     signal_ask = ask  # 🌙 the price we saw — slippage is measured against THIS
     if PAPER_MODE:
@@ -586,6 +615,10 @@ def draw(st, time_left):
         print(colored(f"\n  BTC strike {st['strike']:>12,.2f}  spot {st['spot']:>12,.2f}  ", "cyan")
               + colored(f"itm {itm:+.3f}% ({lead})", icol, attrs=['bold'])
               + colored(f"  ask {ask_s}", "white") + status)
+        # 🌙 Moon Dev - the WHY line: always says exactly why we're not in a trade (with numbers)
+        if not st["entered"] and st["why"]:
+            wcol = "green" if st["why"].startswith("🚀") else ("yellow" if st["action"] else "white")
+            print(colored(f"    ↳ {st['why']}", wcol, attrs=['bold'] if st["action"] else None))
     print()
     print(colored("  ┌───────────────────────── 📜 RECENT ─────────────────────────┐", "white"))
     for ts, msg, color in EVENT_LOG:

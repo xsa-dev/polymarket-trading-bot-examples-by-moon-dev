@@ -4,23 +4,23 @@
 ================================================================================
 The repo's first MID-PRICE MAKER on BTC 5-min markets. The June dog-log caught
 17 windows in a single week where the dog ask was 0.60-0.68 in near-ties
-(coa <= 0.43) — both asks >= 0.60, a >= 20c spread with the true state a coin
+(coa <= 0.43), both asks >= 0.60, a >= 20c spread with the true state a coin
 flip. Takers get slaughtered in those windows; a maker inside the spread gets
 paid to wait. The 89c maker died (0 fills / 275 windows); cheap stink bids were
 toxic (32-35% win); but MID-price maker fills at 0.40-0.50 were NOT toxic
 (57% win @ 44c pooled, Coinbase-resolved). That's the shelf this bot quotes.
 
-THE TRADE (BTC only, maker — never a taker):
+THE TRADE (BTC only, maker, never a taker):
   Gates (all must pass, evaluated every few seconds T-120 → T-30):
     1. coa = |cushion| / ATR4 <= 0.40        (verified coin flip)
-    2. ask_sum = best_ask_up + best_ask_down >= 1.10   (book is WIDE — MMs absent)
+    2. ask_sum = best_ask_up + best_ask_down >= 1.10   (book is WIDE, MMs absent)
     3. quote = min(dog_best_bid + 0.01, 0.48), floor 0.40, and strictly below
        the dog ask (never cross) → post_only GTC resting BUY on the dog side.
   Cancel the quote IMMEDIATELY on: coa > 0.60 (regime broke), ask_sum < 1.05
   (spread collapsed), or T-30 (time up). One quote per window.
   Filled → hold to resolution. Unfilled → cancelled, NO_FILL, move on.
 
-ADVERSE SELECTION is the open question — this bot is built to answer it: every
+ADVERSE SELECTION is the open question, this bot is built to answer it: every
 quote logs coa_at_quote vs coa_at_fill vs mid_at_fill vs outcome. If the fills
 are toxic, the CSV will say so within a week.
 
@@ -28,13 +28,13 @@ HONEST P&L (round-2 fix): resolve ONLY on crypto-price completed==true or Gamma
 outcomePrices 1/0; PENDING never faked; W / L / PENDING separate; P&L resolved only.
 
 LOGGING:
-  - data/spread_harvest_eval.csv   — EVERY window: gate values + final action
-    (SKIP_COA / SKIP_SPREAD / SKIP_PRICE_BAND / SKIP_CROSSED / QUOTED) — this is
+  - data/spread_harvest_eval.csv  , EVERY window: gate values + final action
+    (SKIP_COA / SKIP_SPREAD / SKIP_PRICE_BAND / SKIP_CROSSED / QUOTED), this is
     the ask_sum/spread DATASET the repo has never had
-  - data/spread_harvest_trades.csv — quote lifecycle: quote_price, quote_result,
+  - data/spread_harvest_trades.csv, quote lifecycle: quote_price, quote_result,
     coa_at_fill, mid_at_fill, fill_price, resolution persisted
 
-🔴 PAPER_MODE = False — LIVE FIRE on the AUG14 account, $5 flat. Flip to True to paper.
+🔴 PAPER_MODE = False, LIVE FIRE on the AUG14 account, $5 flat. Flip to True to paper.
 
 📦 SINGLE-FILE: only pip dep is py_clob_client_v2. Repo-root .env required.
 Account: AUG14 (signature_type 2, Gnosis Safe).
@@ -92,9 +92,9 @@ SIGNATURE_TYPE = 2  # AUG14 = Gnosis Safe
 # 🌙 MOON DEV - KEY STRATEGY PARAMS (the microstructure gates)
 # ============================================================================
 COA_MAX = 0.40               # 🪙 verified coin flip only (|cushion|/ATR4)
-COA_CANCEL = 0.60            # 🚨 regime broke — pull the quote immediately
+COA_CANCEL = 0.60            # 🚨 regime broke, pull the quote immediately
 ASK_SUM_MIN = 1.10           # 📖 only quote when the book is WIDE (MMs absent)
-ASK_SUM_COLLAPSE = 1.05      # 🚨 spread collapsed under us — pull the quote
+ASK_SUM_COLLAPSE = 1.05      # 🚨 spread collapsed under us, pull the quote
 QUOTE_CAP = 0.48             # 💵 never bid above this (the mid-price shelf ceiling)
 QUOTE_FLOOR = 0.40           # 💵 never bid below this (cheap fills were TOXIC: 32-35% win)
 TICK = 0.01                  # Polymarket price tick
@@ -174,7 +174,7 @@ def _build_client():
 
 
 def place_maker_bid(token_id, price, size):
-    """🌙 Moon Dev - resting post_only GTC BUY — we are the bid, never the taker."""
+    """🌙 Moon Dev - resting post_only GTC BUY, we are the bid, never the taker."""
     from py_clob_client_v2.clob_types import OrderArgs, OrderType
     client = _build_client()
     order_args = OrderArgs(token_id=str(token_id), price=float(price), size=float(size), side="BUY")
@@ -185,7 +185,7 @@ def place_maker_bid(token_id, price, size):
     except Exception as e:
         err = str(e)
         if any(t in err.lower() for t in ['timeout', 'readtimeout', 'duplicated', 'request exception']):
-            log_event("⚠️ quote timed out — will verify via positions", "yellow")
+            log_event("⚠️ quote timed out, will verify via positions", "yellow")
             return {"status": "timeout"}
         log_event(f"❌ quote failed: {type(e).__name__}: {e}", "red")
         return {}
@@ -326,7 +326,7 @@ def calc_shares(usd, price):
 
 
 def floor_tick(p):
-    """🌙 Moon Dev - floor to the 0.01 tick — never rounds UP past the cap."""
+    """🌙 Moon Dev - floor to the 0.01 tick, never rounds UP past the cap."""
     return math.floor(p * 100 + 1e-9) / 100.0
 
 
@@ -474,11 +474,11 @@ def harvest(st, window_ts, time_left, spot, atr4):
     dog = "Down" if cushion > 0 else "Up"
     fav = "Up" if cushion > 0 else "Down"
 
-    # ---- babysit an open quote: fill detection + cancel gates ----
+    # ==== babysit an open quote: fill detection + cancel gates ====
     if st["quoted"] and not st["filled"]:
         held, avg = position_for_token(st["token_id"])
         if held > 0:
-            # 🎣 FILLED — record the adverse-selection forensics, cancel remainder
+            # 🎣 FILLED, record the adverse-selection forensics, cancel remainder
             st["filled"] = True
             st["shares"] = held
             fill_px = avg if avg > 0 else st["quote_price"]
@@ -522,7 +522,7 @@ def harvest(st, window_ts, time_left, spot, atr4):
     if st["quoted"] or st["filled"]:
         return  # one quote per window
 
-    # ---- entry gates ----
+    # ==== entry gates ====
     if not (TIME_BAND[0] <= time_left <= TIME_BAND[1]):
         st["final_action"] = st["final_action"] or "OUT_OF_TIME_BAND"
         return
@@ -563,13 +563,13 @@ def harvest(st, window_ts, time_left, spot, atr4):
         S["skip_price"] += 1
         return
     if quote >= dog_ask:
-        st["final_action"] = "SKIP_CROSSED"   # locked/crossed book — never cross as a maker
+        st["final_action"] = "SKIP_CROSSED"   # locked/crossed book, never cross as a maker
         return
     if S["halted"]:
         st["final_action"] = "HALTED"
         return
 
-    # 🚀 ALL GATES PASSED — rest the dog bid inside the wide spread
+    # 🚀 ALL GATES PASSED, rest the dog bid inside the wide spread
     shares = calc_shares(USD_SIZE, quote)
     st["quoted"] = True
     st["token_id"] = st["tokens"].get(dog)
@@ -627,7 +627,7 @@ def draw(st, time_left, spot, atr4):
     clear_screen()
     draw_tracker()
     mode = colored("📝 PAPER", "yellow", attrs=['bold']) if PAPER_MODE else colored("🔴 LIVE · $5 real", "red", attrs=['bold'])
-    print(colored("\n  📖 MOON DEV's SPREAD-HARVEST MAKER — paid to wait in wide books 📖  ", "cyan", attrs=['bold']) + mode + "\n")
+    print(colored("\n  📖 MOON DEV's SPREAD-HARVEST MAKER, paid to wait in wide books 📖  ", "cyan", attrs=['bold']) + mode + "\n")
     print(colored(f"  quotes {S['quotes']:<3} fills {S['fills']:<3} cancelled {S['cancelled']:<3} "
                   f"skips: coa {S['skip_coa']:<3} spread {S['skip_spread']:<3} price {S['skip_price']:<3}"
                   f"{' 🛑 DAILY STOP' if S['halted'] else ''}", "white"))
@@ -644,7 +644,7 @@ def draw(st, time_left, spot, atr4):
         ccol = "green" if coa <= COA_MAX else ("red" if coa > COA_CANCEL else "white")
         status = ""
         if st["filled"]:
-            status = colored(f"  🎣 FILLED x{st['shares']:.0f} — riding to resolution", "green", attrs=['bold'])
+            status = colored(f"  🎣 FILLED x{st['shares']:.0f}, riding to resolution", "green", attrs=['bold'])
         elif st["quoted"]:
             status = colored(f"  📖 RESTING {dog} bid @ ${st['quote_price']:.3f} (coa@quote {st['quote_coa']:.2f})", "cyan", attrs=['bold'])
         elif st["final_action"]:
@@ -655,7 +655,7 @@ def draw(st, time_left, spot, atr4):
               + status)
         if st.get("ask_sum_s"):
             print(colored(f"  ask_sum {st['ask_sum_s']}  (gate ≥{ASK_SUM_MIN}, cancel <{ASK_SUM_COLLAPSE})  "
-                          f"dog bid {st.get('dog_bid_s', '—')}  dog ask {st.get('dog_ask_s', '—')}", "white"))
+                          f"dog bid {st.get('dog_bid_s', ',')}  dog ask {st.get('dog_ask_s', ',')}", "white"))
     print()
     print(colored("  ┌───────────────────────── 📜 RECENT ─────────────────────────┐", "white"))
     for ts, msg, color in EVENT_LOG:
@@ -663,7 +663,7 @@ def draw(st, time_left, spot, atr4):
     print(colored("  └──────────────────────────────────────────────────────────────┘", "white"))
     up = (time.time() - SESSION_START) / 60
     print(colored(f"\n  🌙 coa≤{COA_MAX} | ask_sum≥{ASK_SUM_MIN} | bid {QUOTE_FLOOR}-{QUOTE_CAP} | "
-                  f"{TIME_BAND[0]}-{TIME_BAND[1]}s | ${USD_SIZE} | up {up:.1f}m — Ctrl+C", "magenta"))
+                  f"{TIME_BAND[0]}-{TIME_BAND[1]}s | ${USD_SIZE} | up {up:.1f}m, Ctrl+C", "magenta"))
 
 
 # ============================================================================
@@ -680,7 +680,7 @@ def main():
     last_mark = 0.0
     last_check = 0.0
     spot = None
-    log_event("📖 Spread-harvest maker spinning up" + (" (PAPER)" if PAPER_MODE else " — LIVE on AUG14"), "cyan")
+    log_event("📖 Spread-harvest maker spinning up" + (" (PAPER)" if PAPER_MODE else ", LIVE on AUG14"), "cyan")
     log_event(f"🎯 coa≤{COA_MAX} | ask_sum≥{ASK_SUM_MIN} | bid {QUOTE_FLOOR}-{QUOTE_CAP} | {TIME_BAND[0]}-{TIME_BAND[1]}s | ${USD_SIZE}", "cyan")
 
     while True:
@@ -695,7 +695,7 @@ def main():
             S["halted"] = False
         if not S["halted"] and S["daily_pnl"] <= DAILY_STOP_LOSS:
             S["halted"] = True
-            log_event(f"🛑 DAILY STOP {S['daily_pnl']:+.2f} <= {DAILY_STOP_LOSS} — no new quotes today", "red")
+            log_event(f"🛑 DAILY STOP {S['daily_pnl']:+.2f} <= {DAILY_STOP_LOSS}, no new quotes today", "red")
 
         resolve_pending_trades()
 
@@ -738,8 +738,8 @@ def main():
 
 
 if __name__ == "__main__":
-    tag = "PAPER MODE — logging would-be quotes" if PAPER_MODE else "LIVE on AUG14 (real money, $5)"
-    print(colored(f"🌙 Moon Dev's Spread-Harvest Maker — {tag}...", "cyan", attrs=['bold']))
+    tag = "PAPER MODE, logging would-be quotes" if PAPER_MODE else "LIVE on AUG14 (real money, $5)"
+    print(colored(f"🌙 Moon Dev's Spread-Harvest Maker, {tag}...", "cyan", attrs=['bold']))
     print(colored(f"📒 trades: {TRADES_FILE}\n📒 eval:   {EVAL_LOG}", "cyan"))
     time.sleep(0.4)
     while True:
@@ -748,15 +748,15 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print()
             print(colored("  ╔════════════════════════════════════════════════════╗", "yellow", attrs=['bold']))
-            print(colored("  ║  📖 MOON DEV — SPREAD-HARVEST MAKER STOPPED 📖     ║", "yellow", attrs=['bold']))
+            print(colored("  ║  📖 MOON DEV, SPREAD-HARVEST MAKER STOPPED 📖     ║", "yellow", attrs=['bold']))
             print(colored("  ╚════════════════════════════════════════════════════╝", "yellow", attrs=['bold']))
             print(colored(f"  🎯 quotes {S['quotes']}  fills {S['fills']}  day P&L ${S['daily_pnl']:+.2f}", "green", attrs=['bold']))
             print(colored(f"  💾 {TRADES_FILE}", "cyan"))
-            print(colored("  🌙 Moon Dev out — paid to wait, never to chase.", "magenta"))
+            print(colored("  🌙 Moon Dev out, paid to wait, never to chase.", "magenta"))
             print()
             break
         except Exception as e:
-            print(colored(f"  💥 crashed: {type(e).__name__}: {e} — restarting in 3s", "red", attrs=['bold']))
+            print(colored(f"  💥 crashed: {type(e).__name__}: {e}, restarting in 3s", "red", attrs=['bold']))
             _CLIENT_CACHE = None
             time.sleep(3)
             continue

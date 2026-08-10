@@ -5,10 +5,10 @@
 ================================================================================
 The early-window two-sided maker on BTC 5-minute Up/Down markets.
 
-THESIS (from Moon Dev's real logs — nothing invented):
+THESIS (from Moon Dev's real logs, nothing invented):
   Quote post-only bids on BOTH UP and DOWN in the FIRST HALF of each window,
   paying a combined bid_UP + bid_DOWN <= 0.94. When both legs fill, the pair
-  redeems for exactly $1.00 at resolution — adverse selection stops being the
+  redeems for exactly $1.00 at resolution, adverse selection stops being the
   enemy and becomes the thing that pays us.
 
 EVIDENCE (fable_5min_maker_log / v5_89c_maker_log / order error log):
@@ -23,7 +23,7 @@ RULES (do not "improve" these back out):
   ✅ Quote T-300..T-150 ONLY, static bids, reprice at most every 20s and only
      if >2c behind best bid AND the 0.94 cap still holds
   ✅ One leg fills at p1 → completion ladder: raise other bid to
-     min(best_bid, 0.97 - p1); if ask <= 0.99 - p1 LIFT IT (marketable GTC —
+     min(best_bid, 0.97 - p1); if ask <= 0.99 - p1 LIFT IT (marketable GTC ,
      real FAK gets 400'd under $1, v6 pattern)
   ✅ Stranded leg at T-90 → live coa: hold only if our side is coa-favored with
      coa >= 1.0, otherwise CUT at best bid
@@ -74,7 +74,7 @@ REPRICE_INTERVAL = 20               # static quotes: reprice at most every 20s..
 REPRICE_BEHIND = 0.02               # ...and only if > 2c behind that side's best bid
 MIN_COA_HOLD = 1.0                  # stranded leg held naked only if coa-favored & coa >= 1.0
 
-SHARES_PER_LEG = 5                  # exchange floor — SAME count both legs so the box redeems clean
+SHARES_PER_LEG = 5                  # exchange floor, SAME count both legs so the box redeems clean
 HARD_CAP_SHARES = 20                # 🌙 Moon Dev - do NOT raise past this until 100 windows logged
 MIN_SHARES = 5                      # Polymarket minimum order size
 PRICE_TICK = 0.01                   # 1c ticks
@@ -86,7 +86,7 @@ KILL_SWITCH_MIN_TRADES = 20
 BOT_POLL_INTERVAL = 3               # seconds between cycles (books + fill checks)
 MARKET_DURATION = 300               # btc-updown-5m markets = 300 seconds
 
-# --- Files ---
+# === Files ===
 DATA_DIR = os.path.join(BOT_DIR, "data")
 LOG_FILE = os.path.join(DATA_DIR, "box_builder_log.csv")
 LOG_COLS = ['snapshot_time', 'window_slug', 'spread_sum_at_open', 'bid_up', 'bid_dn',
@@ -146,7 +146,7 @@ def _build_client():
 
 def place_maker_bid(token_id, price, size):
     """🌙 Moon Dev - POST-ONLY GTC bid. The API REJECTS post-only orders that
-    would cross the book (249 logged rejects taught us this) — on that reject
+    would cross the book (249 logged rejects taught us this), on that reject
     we re-price 1c LOWER and retry. We never chase up into the book.
 
     Returns (order_id, price_actually_posted) or (None, None)."""
@@ -185,7 +185,7 @@ def place_maker_bid(token_id, price, size):
 def place_taker_order(token_id, side, price, size):
     """🌙 Moon Dev - Marketable GTC that CROSSES the book (post_only=False).
     Why GTC and not FAK/FOK: Polymarket 400s marketable FAK/FOK when the
-    crossable amount is < $1 — verified live (v6 pattern). GTC crosses just
+    crossable amount is < $1, verified live (v6 pattern). GTC crosses just
     the same and any remainder rests at our price (cancelled at T-10)."""
     from py_clob_client_v2.clob_types import OrderArgs, OrderType
     client = _build_client()
@@ -291,7 +291,7 @@ def get_order_book(token_id):
     return {'best_bid': best_bid, 'best_ask': best_ask, 'spread': best_ask - best_bid}
 
 # ============================================================================
-# 🌙 MOON DEV - LIVE COA SIGNAL (v5/v6 brain — real 1m bars, Binance→Coinbase)
+# 🌙 MOON DEV - LIVE COA SIGNAL (v5/v6 brain, real 1m bars, Binance→Coinbase)
 # ============================================================================
 
 
@@ -323,7 +323,7 @@ def fetch_window_bars(window_ts):
 
 def compute_live_coa(window_ts):
     """🌙 Moon Dev - coa at T-90 from the bars closed SO FAR (bars 0..2 are done
-    by T-90; v5/v6 use bars 0..3 at T-60 — same math, live cut). None = no data."""
+    by T-90; v5/v6 use bars 0..3 at T-60, same math, live cut). None = no data."""
     bars = fetch_window_bars(window_ts)
     done = sorted(o for o in bars if o <= 3)
     if 0 not in bars or len(done) < 3:
@@ -337,7 +337,7 @@ def compute_live_coa(window_ts):
             'favored': 'UP' if cushion > 0 else 'DOWN'}
 
 # ============================================================================
-# 🌙 MOON DEV - LOGGING (one row per window, EVEN SKIPS — v5 discipline)
+# 🌙 MOON DEV - LOGGING (one row per window, EVEN SKIPS, v5 discipline)
 # ============================================================================
 
 
@@ -415,7 +415,7 @@ def kill_switch_active():
     wr = (pd.to_numeric(resolved['won']) == 1).mean()
     if wr < KILL_SWITCH_WR:
         print(colored(f"   🚨 Moon Dev - KILL SWITCH! Trailing-{len(resolved)} win rate "
-                      f"{wr*100:.1f}% < {KILL_SWITCH_WR*100:.0f}% — arming PAUSED", "red", attrs=['bold']))
+                      f"{wr*100:.1f}% < {KILL_SWITCH_WR*100:.0f}%, arming PAUSED", "red", attrs=['bold']))
         return True
     return False
 
@@ -437,7 +437,7 @@ def print_trade_tracker():
             status, color = f"${pnl:+.2f}", ("green" if pnl > 0 else "red")
         else:
             status, color = "PENDING", "white"
-        cost = str(t['box_cost']) if str(t['box_cost']) not in ('', 'nan') else '--'
+        cost = str(t['box_cost']) if str(t['box_cost']) not in ('', 'nan') else '..'
         print(colored(f"{ts} | {action:<14} box {cost:<5} | {status:<8} | "
                       f"https://polymarket.com/event/{t['window_slug']}", color))
     print(colored("=" * 78, "cyan", attrs=['bold']))
@@ -456,7 +456,7 @@ def print_session_footer():
     stranded = pd.to_numeric(df[df['action'].isin(['STRANDED_HELD', 'STRANDED_CUT'])]['pnl_usd'], errors='coerce').sum()
     print(colored(f"\n📦 Windows: {len(df)} | Armed: {len(armed)} | Boxes built: {boxes} | "
                   f"Both-fill: {both_fill_pct:.0f}% | Locked PnL: ${locked:+.2f} | "
-                  f"Stranded PnL: ${stranded:+.2f} — Built by Moon Dev 🌙", "cyan", attrs=['bold']))
+                  f"Stranded PnL: ${stranded:+.2f}, Built by Moon Dev 🌙", "cyan", attrs=['bold']))
 
 # ============================================================================
 # 🌙 MOON DEV - BID MATH
@@ -499,7 +499,7 @@ class BoxBuilderBot:
         }
         self.last_reprice = 0.0
 
-    # ---- helpers ----------------------------------------------------------
+    # ==== helpers ==========================================================
     def leg_filled(self, side):
         return self.legs[side]['fill_px'] is not None
 
@@ -522,7 +522,7 @@ class BoxBuilderBot:
         leg['fill_shares'] = shares
         leg['order_id'] = None
         leg['order_px'] = None
-        print(colored(f"   🧱 Moon Dev leg filled: {side} @ {leg['fill_px']:.2f} — "
+        print(colored(f"   🧱 Moon Dev leg filled: {side} @ {leg['fill_px']:.2f}, "
                       f"hunting completion <= {COMPLETE_TAKER_CAP - leg['fill_px']:.2f}",
                       "green", attrs=['bold']))
 
@@ -559,7 +559,7 @@ class BoxBuilderBot:
             return True
         return False
 
-    # ---- state machine ----------------------------------------------------
+    # ==== state machine ====================================================
     def try_arm(self, books, paused):
         """🌙 Moon Dev - the one arming decision, at window open. Wide book or bust."""
         up_book, dn_book = books.get('UP'), books.get('DOWN')
@@ -572,7 +572,7 @@ class BoxBuilderBot:
             return
         if spread_sum < ARM_MIN_SPREAD_SUM:
             self.armed, self.skip_reason = False, 'SKIP_NARROW'
-            print(colored(f"   🙅 Moon Dev - spread_sum {spread_sum:.2f} < {ARM_MIN_SPREAD_SUM:.2f} — "
+            print(colored(f"   🙅 Moon Dev - spread_sum {spread_sum:.2f} < {ARM_MIN_SPREAD_SUM:.2f}, "
                           f"book too tight to box, SKIP", "yellow"))
             return
         bid_up, bid_dn = cap_bids(up_book['best_bid'], dn_book['best_bid'])
@@ -588,7 +588,7 @@ class BoxBuilderBot:
 
     def maybe_reprice(self, books):
         """🌙 Moon Dev - STATIC quotes: at most one reprice per 20s, only if a bid
-        is >2c behind its best bid AND the 0.94 cap still holds (no chasing —
+        is >2c behind its best bid AND the 0.94 cap still holds (no chasing ,
         chasing earned 249 post-only rejects last time)."""
         now = time.time()
         if now - self.last_reprice < REPRICE_INTERVAL:
@@ -608,7 +608,7 @@ class BoxBuilderBot:
             other_px = other['order_px'] if other['order_px'] is not None else 0.0
             new_px = round(min(book['best_bid'], BID_SUM_CAP - other_px), 2)
             if new_px <= leg['order_px']:
-                continue  # cap won't let us move up — stay static
+                continue  # cap won't let us move up, stay static
             print(colored(f"   ↻ Moon Dev - {side} bid {leg['order_px']:.2f} is {behind:.2f} behind, "
                           f"repricing → {new_px:.2f} (cap holds)", "cyan"))
             if not PAPER_MODE:
@@ -619,7 +619,7 @@ class BoxBuilderBot:
     def work_completion(self, books, time_remaining):
         """🌙 Moon Dev - COMPLETION LADDER. One leg is in at p1:
         - raise other bid to min(best_bid, 0.97 - p1) (still >= 3c locked)
-        - if ask <= 0.99 - p1, LIFT IT (marketable GTC) — a guaranteed >= 1c box
+        - if ask <= 0.99 - p1, LIFT IT (marketable GTC), a guaranteed >= 1c box
           beats a naked leg every time."""
         filled_side = self.filled_sides()[0]
         other_side = 'DOWN' if filled_side == 'UP' else 'UP'
@@ -630,7 +630,7 @@ class BoxBuilderBot:
         if not book:
             return
 
-        # taker path — checked every poll
+        # taker path, checked every poll
         taker_cap = round(COMPLETE_TAKER_CAP - p1, 2)
         if book['best_ask'] <= taker_cap:
             print(colored(f"   🏋️ Moon Dev - {other_side} ask {book['best_ask']:.2f} <= {taker_cap:.2f}, "
@@ -649,7 +649,7 @@ class BoxBuilderBot:
                         self.mark_filled(other_side, book['best_ask'], held)
             return
 
-        # maker raise path — rate-limited like every other quote
+        # maker raise path, rate-limited like every other quote
         now = time.time()
         if now - self.completion_last_raise < REPRICE_INTERVAL and leg['order_px'] is not None:
             return
@@ -667,7 +667,7 @@ class BoxBuilderBot:
 
     def run_bailout(self, books, market_ts):
         """🌙 Moon Dev - STRANDED LEG at T-90: live coa decides. Hold naked ONLY
-        if our leg is the coa-favored side with coa >= 1.0 — otherwise CUT at
+        if our leg is the coa-favored side with coa >= 1.0, otherwise CUT at
         the bid (the 0.647-entry losers in the fable log are exactly the trade
         we refuse to ride)."""
         self.bailout_done = True
@@ -676,7 +676,7 @@ class BoxBuilderBot:
         leg = self.legs[filled_side]
         shares = leg['fill_shares'] or SHARES_PER_LEG
 
-        # completion is over — pull the other leg's resting bid
+        # completion is over, pull the other leg's resting bid
         oleg = self.legs[other_side]
         if oleg['order_id'] is not None:
             if not PAPER_MODE:
@@ -691,13 +691,13 @@ class BoxBuilderBot:
                           f"→ HOLDING naked to expiry", "green"))
             return
         if not sig:
-            print(colored("   ⚠️ Moon Dev - no live bars for coa (Binance AND Coinbase dry) — "
+            print(colored("   ⚠️ Moon Dev - no live bars for coa (Binance AND Coinbase dry), "
                           "defaulting to the CUT rule", "yellow"))
 
         book = books.get(filled_side)
         if not book:
             self.bailout_action = 'CUT_NO_BOOK'
-            print(colored("   ❌ Moon Dev - wanted to cut but no book — stuck holding", "red"))
+            print(colored("   ❌ Moon Dev - wanted to cut but no book, stuck holding", "red"))
             return
         cut_px = book['best_bid']
         coa_txt = f"{sig['coa']:.2f}" if sig else "n/a"
@@ -716,7 +716,7 @@ class BoxBuilderBot:
         self.bailout_action = f'CUT@{cut_px:.2f}'
         leg['cut_px'] = cut_px
 
-    # ---- window finalize ---------------------------------------------------
+    # ==== window finalize ===================================================
     def finalize_window(self):
         """🌙 Moon Dev - one honest CSV row per window, no matter what happened."""
         if self.market_info is None:
@@ -772,7 +772,7 @@ class BoxBuilderBot:
         append_log(row)
         print(colored(f"   📝 Moon Dev - Logged window: {row['action']}", "yellow"))
 
-    # ---- one full window ---------------------------------------------------
+    # ==== one full window ===================================================
     def run_market_cycle(self, market_ts):
         market_et = datetime.fromtimestamp(market_ts, tz=ET)
         print("")
@@ -814,7 +814,7 @@ class BoxBuilderBot:
             both = self.leg_filled('UP') and self.leg_filled('DOWN')
             n_filled = len(self.filled_sides())
 
-            # --- T-10: cancel everything still resting, never carry into rollover ---
+            # === T-10: cancel everything still resting, never carry into rollover ===
             if time_remaining <= CANCEL_ALL_SEC:
                 if not self.cancelled_all:
                     self.cancelled_all = True
@@ -822,7 +822,7 @@ class BoxBuilderBot:
                 time.sleep(1)
                 continue
 
-            # --- arming decision (once, at window open with real books) ---
+            # === arming decision (once, at window open with real books) ===
             if self.armed is None:
                 if time_remaining >= QUOTE_CUTOFF_SEC:
                     self.try_arm(books, paused)
@@ -837,7 +837,7 @@ class BoxBuilderBot:
                 time.sleep(BOT_POLL_INTERVAL)
                 continue
 
-            # --- box complete: nothing left to do but hold 🔒 ---
+            # === box complete: nothing left to do but hold 🔒 ===
             if both:
                 cost = self.legs['UP']['fill_px'] + self.legs['DOWN']['fill_px']
                 print(colored(f"\r   📦 Moon Dev - BOX LOCKED at {cost:.2f}, redeems $1.00/pair "
@@ -845,7 +845,7 @@ class BoxBuilderBot:
                 time.sleep(BOT_POLL_INTERVAL)
                 continue
 
-            # --- one leg in: work completion / T-90 bailout ---
+            # === one leg in: work completion / T-90 bailout ===
             if n_filled == 1:
                 if time_remaining <= BAILOUT_SEC and not self.bailout_done:
                     self.run_bailout(books, market_ts)
@@ -854,19 +854,19 @@ class BoxBuilderBot:
                 time.sleep(BOT_POLL_INTERVAL)
                 continue
 
-            # --- no fills yet: static two-sided quotes, first half only ---
+            # === no fills yet: static two-sided quotes, first half only ===
             if time_remaining >= QUOTE_CUTOFF_SEC:
                 self.maybe_reprice(books)
                 up_px, dn_px = self.legs['UP']['order_px'], self.legs['DOWN']['order_px']
-                print(colored(f"\r   🪑 Moon Dev - resting UP {up_px if up_px else '--'} / "
-                              f"DOWN {dn_px if dn_px else '--'} | cap {BID_SUM_CAP:.2f} | "
+                print(colored(f"\r   🪑 Moon Dev - resting UP {up_px if up_px else '..'} / "
+                              f"DOWN {dn_px if dn_px else '..'} | cap {BID_SUM_CAP:.2f} | "
                               f"{time_remaining}s left   ", "cyan"), end='', flush=True)
             else:
                 print(colored(f"\r   ⏳ Moon Dev - past T-{QUOTE_CUTOFF_SEC}, quotes frozen, "
                               f"waiting on fills... {time_remaining}s left   ", "white"), end='', flush=True)
             time.sleep(BOT_POLL_INTERVAL)
 
-        # window over — belt & suspenders cancel, then the honest log row
+        # window over, belt & suspenders cancel, then the honest log row
         if not self.cancelled_all:
             self.cancel_all_resting()
         self.finalize_window()
@@ -890,7 +890,7 @@ def main():
     print(colored(f"   📄 PAPER MODE:     {PAPER_MODE} {'(flip to False for live!)' if PAPER_MODE else '🔴 LIVE FIRE'}", "yellow" if PAPER_MODE else "red"))
     print(colored(f"   🚪 Arm gate:       ask_UP + ask_DOWN >= {ARM_MIN_SPREAD_SUM:.2f} at open", "white"))
     print(colored(f"   🧢 Bid cap:        bid_UP + bid_DOWN <= {BID_SUM_CAP:.2f} (>= 6c/box target)", "white"))
-    print(colored(f"   ⏳ Quote window:   T-300 → T-{QUOTE_CUTOFF_SEC} (first half ONLY — fills live early)", "white"))
+    print(colored(f"   ⏳ Quote window:   T-300 → T-{QUOTE_CUTOFF_SEC} (first half ONLY, fills live early)", "white"))
     print(colored(f"   🪜 Completion:     maker to {COMPLETE_MAKER_CAP:.2f}-p1, taker lift <= {COMPLETE_TAKER_CAP:.2f}-p1", "white"))
     print(colored(f"   🛡️ Bailout:        T-{BAILOUT_SEC} coa >= {MIN_COA_HOLD:.1f} on our side → hold, else CUT", "white"))
     print(colored(f"   💵 Size:           {SHARES_PER_LEG} shares/leg flat (hard cap {HARD_CAP_SHARES} until 100 windows)", "white"))

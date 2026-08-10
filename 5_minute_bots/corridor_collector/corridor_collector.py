@@ -5,12 +5,12 @@
 ================================================================================
 TWO-SIDED market-structure bot on BTC 5-min + 15-min up/down markets.
 
-THE STRUCTURE (idea_5_market_structure.md — 34,918 real 15-min windows):
+THE STRUCTURE (idea_5_market_structure.md, 34,918 real 15-min windows):
   A 15-min window [T, T+900] contains the 5-min window [T+600, T+900] as its
-  final third — BOTH resolve off the SAME close P15. Buy 15m-LEADER +
+  final third, BOTH resolve off the SAME close P15. Buy 15m-LEADER +
   5m-OPPOSITE and there is NO outcome where both legs lose:
       P15 beyond P10 (leader runs)      → $1  (15m leg pays)
-      P0 < P15 < P10 (THE CORRIDOR)     → $2  (BOTH legs pay — the payday)
+      P0 < P15 < P10 (THE CORRIDOR)     → $2  (BOTH legs pay, the payday)
       P15 beyond P0 (full reversal)     → $1  (5m leg saves you)
   Fair pair value = 1 + P(corridor). In the sweet zone (lead 5-30 bps AND
   lead/ATR14 ≥ 1.0) the corridor hits 41.3% → fair sum ≈ $1.41. The floor
@@ -21,16 +21,16 @@ ENTRY (first 90s of the final 5-min market, T+600 → T+690):
   ✅ Price gate: ask15_leader + ask5_opposite ≤ 1 + p_corridor − 0.08 EDGE
   ✅ Sanity caps: ask5 ≤ 0.55, ask15 ≤ 0.93
   ✅ EQUAL shares both legs, marketable GTC back-to-back, one pair per window
-  ✅ Hold BOTH legs to resolution — no stop, no TP, the $1 floor is the stop
+  ✅ Hold BOTH legs to resolution, no stop, no TP, the $1 floor is the stop
   ❌ Never carry a naked leg: retry once (never at a worse price), then
      flatten at the bid and scream UNPAIRED
 
-SIZING: Moon Dev wants $5 TOTAL per corridor pair — but Polymarket's 5-share
+SIZING: Moon Dev wants $5 TOTAL per corridor pair, but Polymarket's 5-share
 minimum per order means 5 shares/leg, so real cost lands ~$5-6 (we print the
 actual total on every fire).
 
 Account: AUG14 | CLOB V2 SDK (V1 post_order now throws PolyApiException)
-Built by Moon Dev 🌙 — the floor is a feature, the corridor is the payday. 🚀
+Built by Moon Dev 🌙, the floor is a feature, the corridor is the payday. 🚀
 ================================================================================
 """
 
@@ -64,13 +64,13 @@ PAPER_MODE = False                  # 🌙 LIVE FIRE! Flip to True for paper tes
 
 PAIR_BUDGET_USD = 5.0               # Moon Dev wants $5 TOTAL per corridor pair
 MIN_SHARES = 5                      # Polymarket minimum order size (per leg!)
-SHARES = MIN_SHARES                 # equal shares BOTH legs — corridor math is 1:1
+SHARES = MIN_SHARES                 # equal shares BOTH legs, corridor math is 1:1
                                     # 5sh x (ask15+ask5 ≈ 1.1-1.33) → real cost ~$5-6
 
 ZONE_LEAD_BPS = (5.0, 30.0)         # sweet zone: lead 5-30 bps (41.3% corridor)
 ZONE_MIN_LEAD_ATR = 1.0             # AND lead/ATR14 ≥ 1.0
 EDGE = 0.08                         # fire at fair_sum − 0.08 (fair $1.41 → pay ≤ $1.33)
-ASK5_CAP = 0.55                     # 5m-opposite is a coin flip — never pay > 55c
+ASK5_CAP = 0.55                     # 5m-opposite is a coin flip, never pay > 55c
 ASK15_CAP = 0.93                    # 15m leader sanity cap
 
 # 🌙 Moon Dev - P(corridor) by 10-min lead size in bps (52 wks of REAL 1-min candles)
@@ -96,7 +96,7 @@ KILL_SWITCH_MIN_PAIRS = 15          # ...but only once 15 pairs have resolved
 
 ET = timezone(timedelta(hours=-4))
 
-# --- Files ---
+# === Files ===
 DATA_DIR = os.path.join(BOT_DIR, "data")
 LOG_FILE = os.path.join(DATA_DIR, "corridor_collector_log.csv")
 LOG_FIELDS = ["time", "T15", "slug15", "slug5", "P0", "P10", "lead_bps", "atr14",
@@ -113,7 +113,7 @@ PUBLIC_KEY_ENV_NAME = f"PUBLIC_KEY{ACCOUNT_SUFFIX}"
 SIGNATURE_TYPE = 2                  # Gnosis Safe
 
 # ============================================================================
-# 🌙 MOON DEV - V2 CLOB CLIENT (taker orders — V1 post_order is dead)
+# 🌙 MOON DEV - V2 CLOB CLIENT (taker orders, V1 post_order is dead)
 # ============================================================================
 _CLIENT_CACHE = None
 
@@ -156,7 +156,7 @@ def place_taker(token_id, side, price, size):
     """🌙 Moon Dev - Marketable GTC that CROSSES the book (post_only=False).
 
     Why GTC and not FAK/FOK: Polymarket 400s marketable FAK/FOK orders when the
-    crossable amount is < $1 — verified live. GTC crosses just the same and any
+    crossable amount is < $1, verified live. GTC crosses just the same and any
     unfilled remainder rests at our price (cancelled on window rollover)."""
     from py_clob_client_v2.clob_types import OrderArgs, OrderType
     client = _build_client()
@@ -275,7 +275,7 @@ def p_corridor_lookup(lead_bps):
 
 def log_window(st, skip_reason=""):
     """🌙 Moon Dev - append the window row. The live_sum column on skips is the
-    whole research payoff — live pair pricing vs the physical table."""
+    whole research payoff, live pair pricing vs the physical table."""
     os.makedirs(DATA_DIR, exist_ok=True)
     fmt = lambda v, d=2: "" if v is None else round(v, d)
     row = pd.DataFrame([{
@@ -312,13 +312,13 @@ def _gamma_winner(slug):
         return None
     up_price = float(prices[0])
     if up_price not in (0.0, 1.0):
-        return None   # not resolved yet — no guessing, definitive data only
+        return None   # not resolved yet, no guessing, definitive data only
     return "Up" if up_price == 1.0 else "Down"
 
 
 def resolve_pending_trades():
     """🌙 Moon Dev - fill in P15/corridor_hit/payout/pnl on executed hedged pairs
-    once BOTH markets resolve (gamma outcomePrices — the honest-P&L standard)."""
+    once BOTH markets resolve (gamma outcomePrices, the honest-P&L standard)."""
     if not os.path.exists(LOG_FILE):
         return
     df = pd.read_csv(LOG_FILE)
@@ -349,9 +349,9 @@ def resolve_pending_trades():
         df.at[idx, 'pnl'] = round(pnl, 2)
         changed = True
         if corridor:
-            print(colored(f"   💰 Moon Dev DOUBLE WIN — close landed in the corridor! +${pnl:.2f}", "green", attrs=['bold']))
+            print(colored(f"   💰 Moon Dev DOUBLE WIN, close landed in the corridor! +${pnl:.2f}", "green", attrs=['bold']))
         elif won5:
-            print(colored(f"   🧱 Moon Dev floor save — full reversal, 5m leg paid. -${-pnl:.2f} only.", "yellow"))
+            print(colored(f"   🧱 Moon Dev floor save, full reversal, 5m leg paid. -${-pnl:.2f} only.", "yellow"))
         else:
             print(colored(f"   🏁 Moon Dev - leader ran, 15m leg paid the floor. ${pnl:+.2f}", "yellow"))
     if changed:
@@ -360,7 +360,7 @@ def resolve_pending_trades():
 
 def kill_switch_active():
     """🌙 Moon Dev - True = PAUSE. Trailing-30 realized corridor rate < 20%
-    (table says 41.3% in-zone — half that means the zone is lying, stand down)."""
+    (table says 41.3% in-zone, half that means the zone is lying, stand down)."""
     if not os.path.exists(LOG_FILE):
         return False
     df = pd.read_csv(LOG_FILE)
@@ -370,7 +370,7 @@ def kill_switch_active():
     rate = resolved['corridor_hit'].mean()
     if rate < KILL_SWITCH_CORRIDOR:
         print(colored(f"   🚨 Moon Dev - KILL SWITCH! Trailing-{len(resolved)} corridor rate "
-                      f"{rate*100:.1f}% < {KILL_SWITCH_CORRIDOR*100:.0f}% — entries PAUSED", "red", attrs=['bold']))
+                      f"{rate*100:.1f}% < {KILL_SWITCH_CORRIDOR*100:.0f}%, entries PAUSED", "red", attrs=['bold']))
         return True
     return False
 
@@ -463,11 +463,11 @@ def execute_pair(st):
 
     if st['hedged']:
         actual = SHARES * (ask15 + ask5)
-        print(colored(f"   ✅ Moon Dev - BOTH LEGS FILLED — pair locked, actual total ${actual:.2f}. "
+        print(colored(f"   ✅ Moon Dev - BOTH LEGS FILLED, pair locked, actual total ${actual:.2f}. "
                       f"Holding to resolution, the floor is the stop! 🧱", "green", attrs=['bold']))
     else:
         # 🌙 Moon Dev - UNPAIRED! Scream it, flatten the orphan, no chasing.
-        print(colored(f"\n   🚨🚨🚨 MOON DEV UNPAIRED LEG! fill15={f15:g} fill5={f5:g} — "
+        print(colored(f"\n   🚨🚨🚨 MOON DEV UNPAIRED LEG! fill15={f15:g} fill5={f5:g}, "
                       f"one leg naked, flattening at the bid NOW 🚨🚨🚨", "red", attrs=['bold']))
         if f15 > 0 and f5 <= 0:
             cancel_token_orders(t5)
@@ -499,7 +499,7 @@ def evaluate_window(st):
     Returns True when the window is DONE (fired or hard-skipped)."""
     T15 = st['T15']
 
-    # --- markets ---
+    # === markets ===
     if st['tok15'] is None:
         st['tok15'] = get_market_tokens(st['slug15'])
     if st['tok5'] is None:
@@ -509,7 +509,7 @@ def evaluate_window(st):
         print(colored("   🔄 Moon Dev - markets not indexed yet, retrying...", "yellow"))
         return False
 
-    # --- real BTC strikes + vol (Binance 1m, NEVER faked) ---
+    # === real BTC strikes + vol (Binance 1m, NEVER faked) ===
     if st['P0'] is None:
         st['P0'] = bar_open(T15)
     if st['P10'] is None:
@@ -521,7 +521,7 @@ def evaluate_window(st):
         print(colored("   🔄 Moon Dev - waiting on real BTC price data...", "yellow"))
         return False
 
-    # --- leader + zone stats ---
+    # === leader + zone stats ===
     lead_abs = abs(st['P10'] - st['P0'])
     st['lead_bps'] = lead_abs / st['P0'] * 10_000
     st['lead_atr'] = lead_abs / st['atr14']
@@ -530,7 +530,7 @@ def evaluate_window(st):
     st['p_corridor'] = p_corridor_lookup(st['lead_bps'])
     st['fair_sum'] = 1.0 + st['p_corridor']
 
-    # --- live asks (read BEFORE zone gate so skips still log the pair sum) ---
+    # === live asks (read BEFORE zone gate so skips still log the pair sum) ===
     b15 = get_order_book(st['tok15'][st['s15']])
     b5 = get_order_book(st['tok5'][st['s5']])
     st['ask15'] = b15['best_ask'] if b15 else None
@@ -549,17 +549,17 @@ def evaluate_window(st):
                   f"{'$%.3f' % ssum if ssum is not None else 'n/a'} "
                   f"{'🎯 IN ZONE' if zone else '😴 out of zone'}", "cyan"))
 
-    # --- GATE 1: sweet zone (lead 5-30 bps AND lead/ATR ≥ 1.0) ---
+    # === GATE 1: sweet zone (lead 5-30 bps AND lead/ATR ≥ 1.0) ===
     if not zone:
         st['skip_reason'] = "ZONE_LEAD" if st['lead_atr'] >= ZONE_MIN_LEAD_ATR else "ZONE_ATR"
-        return True   # zone won't change this window — log and move on
+        return True   # zone won't change this window, log and move on
 
-    # --- GATE 2: books ---
+    # === GATE 2: books ===
     if ssum is None:
         st['skip_reason'] = "NO_BOOK"
         return False
 
-    # --- GATE 3: sanity caps ---
+    # === GATE 3: sanity caps ===
     if st['ask5'] > ASK5_CAP:
         st['skip_reason'] = "ASK5_CAP"
         return False
@@ -567,7 +567,7 @@ def evaluate_window(st):
         st['skip_reason'] = "ASK15_CAP"
         return False
 
-    # --- GATE 4: the price gate — pay fair minus EDGE or nothing ---
+    # === GATE 4: the price gate, pay fair minus EDGE or nothing ===
     if ssum > st['fair_sum'] - EDGE:
         st['skip_reason'] = "SUM_TOO_RICH"
         return False
@@ -576,7 +576,7 @@ def evaluate_window(st):
         st['skip_reason'] = "KILL_SWITCH"
         return False
 
-    # --- ALL GATES PASSED → COLLECT! 🚀 ---
+    # === ALL GATES PASSED → COLLECT! 🚀 ===
     st['gate_pass'] = True
     print(colored(f"   🎯 Moon Dev: lead {st['lead_bps']:.1f}bps ({st['lead_atr']:.1f}x ATR) → "
                   f"corridor {st['p_corridor']*100:.0f}% → fair ${st['fair_sum']:.2f} | "
@@ -595,7 +595,7 @@ def main():
     print(colored("""
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║   🌙 MOON DEV's CORRIDOR COLLECTOR v1.0 🌙                                  ║
-║   15m-leader + 5m-opposite pair — the $1 floor is the stop,                 ║
+║   15m-leader + 5m-opposite pair, the $1 floor is the stop,                 ║
 ║   the $2 corridor (41.3% in-zone) is the payday                             ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
     """, "cyan", attrs=['bold']))
@@ -606,7 +606,7 @@ def main():
     print(colored(f"   🎯 Zone gate:      lead {ZONE_LEAD_BPS[0]:.0f}-{ZONE_LEAD_BPS[1]:.0f} bps AND lead/ATR14 ≥ {ZONE_MIN_LEAD_ATR:.1f}", "white"))
     print(colored(f"   💰 Price gate:     ask15+ask5 ≤ 1 + p_corridor − {EDGE:.2f} | caps ask5 ≤ {ASK5_CAP:.2f}, ask15 ≤ {ASK15_CAP:.2f}", "white"))
     print(colored(f"   ⏳ Action window:  T15+{ACTION_START}s → T15+{ACTION_END}s (first 90s of the final 5m)", "white"))
-    print(colored(f"   🧱 Exit:           hold BOTH legs to resolution — the floor IS the stop", "white"))
+    print(colored(f"   🧱 Exit:           hold BOTH legs to resolution, the floor IS the stop", "white"))
     print(colored(f"   🚨 Kill switch:    trailing-{KILL_SWITCH_WINDOW} corridor rate < {KILL_SWITCH_CORRIDOR*100:.0f}% → pause", "white"))
 
     print_session_summary()
@@ -619,12 +619,12 @@ def main():
     px = bar_open(now_min - 60)
     atr = atr14_at(now_min)
     if px is None or atr is None:
-        print(colored("❌ Moon Dev - BTC price feed is dead — refusing to run on no data!", "red"))
+        print(colored("❌ Moon Dev - BTC price feed is dead, refusing to run on no data!", "red"))
         sys.exit(1)
     print(colored(f"   BTC 1m open: ${px:,.2f} | ATR14: ${atr:,.2f}", "cyan"))
 
     print(colored(f"\n{'='*70}", "green"))
-    print(colored("🚀 Moon Dev's CORRIDOR COLLECTOR — hunting the $2 corridor...", "green", attrs=['bold']))
+    print(colored("🚀 Moon Dev's CORRIDOR COLLECTOR, hunting the $2 corridor...", "green", attrs=['bold']))
     print(colored("   Press Ctrl+C to stop", "yellow"))
     print(colored(f"{'='*70}\n", "green"))
 
@@ -637,7 +637,7 @@ def main():
             T15 = (int(now) // WIN15) * WIN15
             elapsed = int(now) - T15
 
-            # --- rollover: close out the old 15-min window ---
+            # === rollover: close out the old 15-min window ===
             if T15 != st['T15']:
                 if st['executed'] and not PAPER_MODE:
                     # 🌙 Moon Dev - cancel any resting GTC remainders on rollover
@@ -657,7 +657,7 @@ def main():
                 resolve_pending_trades()
                 st['paused'] = kill_switch_active()
 
-            # --- the action window: T15+600 → T15+690 ---
+            # === the action window: T15+600 → T15+690 ===
             if ACTION_START <= elapsed <= ACTION_END and not st['logged']:
                 if now - st['last_check'] >= CHECK_INTERVAL:
                     st['last_check'] = now
@@ -666,7 +666,7 @@ def main():
                         if not st['logged']:
                             log_window(st, st['skip_reason'])
             elif elapsed > ACTION_END and not st['logged']:
-                # window over, never fired — log the skip with the last known stats
+                # window over, never fired, log the skip with the last known stats
                 log_window(st, st['skip_reason'])
             elif elapsed < ACTION_START and now - last_wait_print >= 60:
                 last_wait_print = now

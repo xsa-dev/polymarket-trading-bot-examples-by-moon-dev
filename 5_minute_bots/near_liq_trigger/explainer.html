@@ -1,0 +1,859 @@
+<title>The Ledge — Moon Dev's Liquidation Cascade Bot in 5 Minutes</title>
+
+<style>
+  :root {
+    --ground:   #F4F6F8;
+    --surface:  #FFFFFF;
+    --edge:     #D8DEE5;
+    --ink:      #131C24;
+    --muted:    #5C6B79;
+    --faint:    #93A1AD;
+    --accent:   #B9720C;
+    --accent-soft: #F7E4C4;
+    --down:     #C42B2B;
+    --down-soft:#F6DEDE;
+    --up:       #1D8A5C;
+    --up-soft:  #D9EFE5;
+    --shadow:   0 1px 2px rgba(19,28,36,.06), 0 8px 24px rgba(19,28,36,.06);
+
+    --font-display: "Futura", "Avenir Next", "Century Gothic", "URW Gothic", system-ui, sans-serif;
+    --font-body: "Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, "Cascadia Mono", Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:   #0E141B;
+      --surface:  #16202B;
+      --edge:     #27333F;
+      --ink:      #E8EDF2;
+      --muted:    #8FA0B0;
+      --faint:    #63747F;
+      --accent:   #F5B043;
+      --accent-soft: #3A2C15;
+      --down:     #E9615F;
+      --down-soft:#3A1E20;
+      --up:       #46C08C;
+      --up-soft:  #10312A;
+      --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:   #0E141B;
+    --surface:  #16202B;
+    --edge:     #27333F;
+    --ink:      #E8EDF2;
+    --muted:    #8FA0B0;
+    --faint:    #63747F;
+    --accent:   #F5B043;
+    --accent-soft: #3A2C15;
+    --down:     #E9615F;
+    --down-soft:#3A1E20;
+    --up:       #46C08C;
+    --up-soft:  #10312A;
+    --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
+  }
+
+  :root[data-theme="light"] {
+    --ground:   #F4F6F8;
+    --surface:  #FFFFFF;
+    --edge:     #D8DEE5;
+    --ink:      #131C24;
+    --muted:    #5C6B79;
+    --faint:    #93A1AD;
+    --accent:   #B9720C;
+    --accent-soft: #F7E4C4;
+    --down:     #C42B2B;
+    --down-soft:#F6DEDE;
+    --up:       #1D8A5C;
+    --up-soft:  #D9EFE5;
+    --shadow:   0 1px 2px rgba(19,28,36,.06), 0 8px 24px rgba(19,28,36,.06);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ---------- deck shell ---------- */
+  .deck {
+    position: relative;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .track {
+    display: flex;
+    height: 100%;
+    width: 500%;
+    transition: transform .5s cubic-bezier(.22,.61,.36,1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .track { transition: none; }
+  }
+
+  .slide {
+    width: 20%;
+    height: 100%;
+    padding: clamp(20px, 3.4vh, 40px) clamp(20px, 4vw, 68px) clamp(58px, 8vh, 74px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px, 2vh, 22px);
+    overflow-y: auto;
+  }
+
+  /* ---------- slide head ---------- */
+  .eyebrow {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    font-family: var(--font-mono);
+    font-size: clamp(10px, 1.05vw, 13px);
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .eyebrow .step {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(1.9rem, 4.4vw, 3.5rem);
+    line-height: 1.02;
+    letter-spacing: -.02em;
+    margin: 0;
+    text-wrap: balance;
+    font-weight: 600;
+  }
+
+  .kicker {
+    font-family: var(--font-body);
+    font-size: clamp(1rem, 1.5vw, 1.35rem);
+    line-height: 1.45;
+    color: var(--muted);
+    margin: 0;
+    max-width: 34ch;
+  }
+
+  /* ---------- two column body ---------- */
+  .body {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    gap: clamp(20px, 3vw, 52px);
+    align-items: start;
+  }
+  .body.wide-chart { grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr); }
+
+  .prose {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px, 1.8vh, 20px);
+    font-size: clamp(1rem, 1.35vw, 1.28rem);
+    line-height: 1.5;
+    max-width: 40ch;
+  }
+  .prose p { margin: 0; }
+  .prose strong { color: var(--ink); font-weight: 700; }
+  .prose .hl { color: var(--accent); font-weight: 700; }
+  .prose .dn { color: var(--down); font-weight: 700; }
+  .prose .up { color: var(--up); font-weight: 700; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    padding: clamp(14px, 2vw, 26px);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+  .panel-title {
+    font-family: var(--font-mono);
+    font-size: clamp(9.5px, .95vw, 12px);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--faint);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .panel-note {
+    font-family: var(--font-mono);
+    font-size: clamp(9.5px, .92vw, 11.5px);
+    color: var(--faint);
+    letter-spacing: .03em;
+    line-height: 1.5;
+  }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  /* ---------- stat rows ---------- */
+  .stat-row { display: flex; gap: clamp(10px, 1.6vw, 26px); flex-wrap: wrap; }
+  .stat { display: flex; flex-direction: column; gap: 3px; }
+  .stat .v {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(1.25rem, 2.4vw, 2.1rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -.02em;
+  }
+  .stat .k {
+    font-family: var(--font-mono);
+    font-size: clamp(9px, .9vw, 11px);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .v.dn { color: var(--down); }
+  .v.up { color: var(--up); }
+  .v.ac { color: var(--accent); }
+
+  /* ---------- lock / step chips ---------- */
+  .locks { display: flex; flex-direction: column; gap: 10px; }
+  .lock {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 12px;
+    align-items: start;
+    padding: 12px 14px;
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    background: var(--surface);
+  }
+  .lock.on { border-color: var(--accent); background: var(--accent-soft); }
+  .lock .mark {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: var(--faint);
+    padding-top: 3px;
+  }
+  .lock.on .mark { color: var(--accent); }
+  .lock .t { font-weight: 700; font-size: clamp(.98rem, 1.25vw, 1.14rem); line-height: 1.25; }
+  .lock .d { color: var(--muted); font-size: clamp(.88rem, 1.1vw, 1rem); line-height: 1.4; margin-top: 4px; }
+
+  /* ---------- risk list ---------- */
+  .risks { display: flex; flex-direction: column; gap: 12px; }
+  .risk {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--edge);
+  }
+  .risk:last-child { border-bottom: 0; padding-bottom: 0; }
+  .risk .n {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--down);
+    padding-top: 4px;
+  }
+  .risk .t { font-weight: 700; font-size: clamp(.98rem, 1.2vw, 1.12rem); line-height: 1.3; }
+  .risk .d { color: var(--muted); font-size: clamp(.86rem, 1.05vw, .99rem); line-height: 1.45; margin-top: 3px; }
+
+  .guard {
+    margin-top: 4px;
+    padding: 12px 14px;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 4px 4px 0;
+  }
+  .guard .t {
+    font-family: var(--font-mono);
+    font-size: clamp(9.5px, .95vw, 11.5px);
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .guard .d { font-size: clamp(.88rem, 1.08vw, 1rem); line-height: 1.5; margin-top: 6px; }
+
+  /* ---------- chrome ---------- */
+  .chrome {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: clamp(46px, 6.5vh, 58px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 clamp(16px, 4vw, 68px);
+    background: linear-gradient(to top, var(--ground) 62%, transparent);
+    font-family: var(--font-mono);
+    font-size: clamp(9.5px, .95vw, 11.5px);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .brand { color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .rail { display: flex; gap: 6px; align-items: center; }
+  .seg {
+    width: clamp(26px, 4vw, 52px);
+    height: 3px;
+    background: var(--edge);
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background .25s;
+  }
+  .seg:hover { background: var(--muted); }
+  .seg.on { background: var(--accent); }
+  .seg:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .nav { display: flex; gap: 8px; align-items: center; }
+  .nav button {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--edge);
+    border-radius: 3px;
+    width: 30px; height: 26px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .nav button:hover { border-color: var(--accent); color: var(--accent); }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .count { min-width: 44px; text-align: right; }
+
+  @media (max-width: 900px) {
+    body { overflow: auto; }
+    .deck { height: auto; overflow: visible; }
+    .track { display: block; width: 100%; transform: none !important; }
+    .slide {
+      width: 100%;
+      height: auto;
+      min-height: auto;
+      padding: 34px 20px 42px;
+      border-bottom: 1px solid var(--edge);
+    }
+    .body, .body.wide-chart { grid-template-columns: 1fr; }
+    .prose { max-width: none; }
+    .chrome { display: none; }
+  }
+</style>
+
+<div class="deck">
+<div class="track" id="track">
+
+  <!-- ================= SLIDE 1 ================= -->
+  <section class="slide">
+    <div class="eyebrow"><span class="step">Slide 1 / 5</span><span>The thing that starts it all</span></div>
+    <h1>A liquidation is a forced sale.</h1>
+    <p class="kicker">Someone borrowed money to bet big. They ran out of room. Now the exchange sells for them — whether they like it or not.</p>
+
+    <div class="body">
+      <div class="prose">
+        <p>A trader puts in <strong>$2,500</strong> of his own money and borrows enough to control <strong>$100,000</strong> of Bitcoin. That is called <span class="hl">40x leverage</span>.</p>
+        <p>Here is the catch. If Bitcoin drops about <strong>2.5%</strong>, his $2,500 is gone. So the exchange steps in and <span class="dn">sells everything for him</span>. That is a liquidation.</p>
+        <p>The trader in this picture already lost most of his cushion. He is now only <span class="dn">0.14% away</span> from the line. That is about <span class="num">$92</span> of Bitcoin movement.</p>
+        <p>And this is the part that matters to us: <strong>a forced sale is a real order hitting the market.</strong> Forced selling pushes the price <span class="dn">down</span>. Forced buying pushes it <span class="up">up</span>.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><span>One real trader, right now</span><span>Hyperliquid · BTC · 40x long</span></div>
+        <div id="c1a"></div>
+        <div class="stat-row" style="margin-top:2px">
+          <div class="stat"><span class="v num">$64,263</span><span class="k">Price now</span></div>
+          <div class="stat"><span class="v num dn">$64,171</span><span class="k">He gets sold here</span></div>
+          <div class="stat"><span class="v num dn">0.14%</span><span class="k">Room left</span></div>
+        </div>
+        <div class="panel-note">Real snapshot from the Moon Dev API, 11:59 AM ET. Every big trader's liquidation price is public. We can all see exactly where he breaks.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SLIDE 2 ================= -->
+  <section class="slide">
+    <div class="eyebrow"><span class="step">Slide 2 / 5</span><span>Why a 5-minute market hits so hard</span></div>
+    <h1>A $5 bet that punches like $1,000.</h1>
+    <p class="kicker">Bitcoin barely moves in five minutes. On a 5-minute market, barely moving is enough to double your money — or take all of it.</p>
+
+    <div class="body">
+      <div class="prose">
+        <p>In a normal 5 minutes, Bitcoin moves about <strong>0.1%</strong>. That is almost nothing.</p>
+        <p>The whale at 40x? That 0.1% move changes his money by <strong>4%</strong>.</p>
+        <p>You on a 5-minute market? You buy “Down” for <strong>50¢</strong>. If you are right, it pays <strong>$1.00</strong>. That same tiny move just gave you <span class="hl">+100%</span>.</p>
+        <p>100% divided by 0.1% is about <span class="hl">1,000x</span>. Your $5 hits like $1,000 of Bitcoin.</p>
+        <p>And there are <strong>288</strong> of these markets every single day — one every five minutes, all day and all night.</p>
+        <p><strong>The good news:</strong> you can never lose more than the $5 you put in. Nobody can liquidate you. The whale can lose everything he has.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><span>What one 0.1% Bitcoin move does to your money</span></div>
+        <div id="c2a"></div>
+        <div class="panel-title" style="margin-top:6px"><span>One day of chances</span><span>24 hours &times; 12 per hour</span></div>
+        <div id="c2b"></div>
+        <div class="panel-note">Each square is one 5-minute market. A whale might hold one trade all day. You get 288 fresh coin flips — which cuts both ways.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SLIDE 3 ================= -->
+  <section class="slide">
+    <div class="eyebrow"><span class="step">Slide 3 / 5</span><span>Step one — find the ledge</span></div>
+    <h1>Right now, all the fuel is below us.</h1>
+    <p class="kicker">Longs get sold off <em>below</em> the price. Shorts get bought back <em>above</em> it. So look at both sides and ask: which pile is closer?</p>
+
+    <div class="body wide-chart">
+      <div class="prose">
+        <p>This is a real photo of the market at <span class="num">11:59 AM ET</span>. Every bar is one big trader, parked at the exact price where they get force-sold.</p>
+        <p>Inside half a percent <span class="dn">below</span> us: <strong>nine</strong> big traders holding <span class="dn">$9.98 million</span>.</p>
+        <p>Inside half a percent <span class="up">above</span> us: <span class="up">nobody</span>. The nearest short is more than twice as far away.</p>
+        <p>So the market is <strong>tilted</strong>. If price slips a little, it falls into a wall of forced selling — and that selling pushes it down even further, into the next guy.</p>
+        <p class="hl">Our bot now points DOWN. But it does not buy yet.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><span>Big traders near their breaking point</span><span>Bar length = size of the bet</span></div>
+        <div id="c3a"></div>
+        <div class="stat-row" style="border-top:1px solid var(--edge); padding-top:14px">
+          <div class="stat"><span class="v num dn">$9.98M</span><span class="k">Within 0.5% below</span></div>
+          <div class="stat"><span class="v num up">$0</span><span class="k">Within 0.5% above</span></div>
+          <div class="stat"><span class="v num ac">0.14%</span><span class="k">Closest one</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SLIDE 4 ================= -->
+  <section class="slide">
+    <div class="eyebrow"><span class="step">Slide 4 / 5</span><span>Step two — wait for the first domino</span></div>
+    <h1>Being close is not a reason to bet.</h1>
+    <p class="kicker">The bot sits still until one real person actually gets wiped out. That first forced sale is the proof the fall has started.</p>
+
+    <div class="body">
+      <div class="prose">
+        <p>A trader can hover near his line for hours and never break. So “close” is not enough.</p>
+        <p>The bot waits for a <span class="hl">real liquidation of $5,000 or more</span>, on the same side, in the last two minutes.</p>
+        <p>That is the first domino. Someone smaller already got knocked over, and he is falling toward the big pile.</p>
+        <p>The second it prints, the bot buys and then <strong>does nothing else</strong>. No selling, no panic, no changing its mind. It holds until the five minutes are up.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><span>Both locks must open</span><span>Real example · 11:50 AM ET</span></div>
+        <div class="locks">
+          <div class="lock on">
+            <span class="mark">1</span>
+            <div>
+              <div class="t">Lock one: someone big is on the ledge</div>
+              <div class="d">A <span class="num">$135,779</span> long, only <span class="num">0.14%</span> from being force-sold. Big enough ($100k+) and close enough (0.5%). <strong>Open.</strong></div>
+            </div>
+          </div>
+          <div class="lock on">
+            <span class="mark">2</span>
+            <div>
+              <div class="t">Lock two: the falling started</div>
+              <div class="d">A real <span class="num">$9,582</span> long liquidation printed on Bybit <span class="num">99</span> seconds ago. <strong>Open.</strong></div>
+            </div>
+          </div>
+          <div class="lock">
+            <span class="mark">→</span>
+            <div>
+              <div class="t">Buy “Down” at 21¢, hold to the bell</div>
+              <div class="d">$5 in. If Bitcoin closes lower in 5 minutes, those shares pay <span class="num">$23.80</span>. If not, the $5 is gone. There is no exit either way.</div>
+            </div>
+          </div>
+        </div>
+        <div id="c4a" style="margin-top:4px"></div>
+        <div class="panel-note">Most five-minute windows both locks never open — and the bot buys nothing at all. Sitting still is the strategy working, not the strategy broken.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SLIDE 5 ================= -->
+  <section class="slide">
+    <div class="eyebrow"><span class="step">Slide 5 / 5</span><span>The honest part</span></div>
+    <h1>Here is how this loses money.</h1>
+    <p class="kicker">The price of a share is really the crowd's guess at the odds. To win, we have to be a better guesser than the whole crowd.</p>
+
+    <div class="body wide-chart">
+      <div class="prose">
+        <p>When we pay <strong>21¢</strong>, the market is telling us it thinks there is a <strong>21% chance</strong> of Down.</p>
+        <p>So we must be right <strong>more than 21%</strong> of the time just to break even. Being right 21% of the time earns exactly <span class="num">$0</span>.</p>
+        <p>Losing hurts in a way that is easy to miss: <strong>every loss is a total loss</strong> of that $5. There is no “down a little.” It is all or nothing, up to 288 times a day.</p>
+        <p class="hl">This is why the guardrails exist, and why we start with $5.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><span>Three real ways this fails</span></div>
+        <div class="risks">
+          <div class="risk">
+            <span class="n">1</span>
+            <div>
+              <div class="t">We buy after the news</div>
+              <div class="d">The domino already fell, so the price already moved. We may pay up for something the crowd figured out first. That is why the bot never pays more than 95¢.</div>
+            </div>
+          </div>
+          <div class="risk">
+            <span class="n">2</span>
+            <div>
+              <div class="t">One domino is not always a chain</div>
+              <div class="d">Plenty of small liquidations happen and nothing follows. Sometimes the cascade is already finished by the time we see it.</div>
+            </div>
+          </div>
+          <div class="risk">
+            <span class="n">3</span>
+            <div>
+              <div class="t">Nobody has tested this on the past</div>
+              <div class="d">There is no saved history of who was near liquidation last year. So there is no backtest. We are finding out live, with small money, and writing down every single window.</div>
+            </div>
+          </div>
+        </div>
+        <div id="c5a"></div>
+        <div class="guard">
+          <div class="t">The guardrails</div>
+          <div class="d">$5 per trade &middot; one trade per 5 minutes &middot; stop for the day at &minus;$30 &middot; auto shut-off if the last 40 trades average worse than &minus;40¢.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<div class="chrome">
+  <span class="brand">🌙 Moon Dev</span>
+  <div class="rail" id="rail"></div>
+  <div class="nav">
+    <button id="prev" aria-label="Previous slide">&larr;</button>
+    <button id="next" aria-label="Next slide">&rarr;</button>
+    <span class="count num" id="count">1 / 5</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var NS = "http://www.w3.org/2000/svg";
+  function el(name, attrs, text) {
+    var n = document.createElementNS(NS, name);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function svg(w, h) {
+    var s = el("svg", { viewBox: "0 0 " + w + " " + h, role: "img" });
+    return s;
+  }
+  function mount(id, node) { document.getElementById(id).appendChild(node); }
+  function money(v) {
+    if (v >= 1e6) return "$" + (v / 1e6).toFixed(2) + "M";
+    if (v >= 1e3) return "$" + Math.round(v / 1e3) + "k";
+    return "$" + v;
+  }
+
+  var MONO = "ui-monospace, SF Mono, Menlo, monospace";
+
+  /* ============ SLIDE 1 — leverage stack + the ledge ============ */
+  (function () {
+    var W = 560, H = 300, s = svg(W, H);
+    var barY = 16, barH = 46, x0 = 8, barW = W - 16;
+
+    s.appendChild(el("text", { x: x0, y: barY - 4, "font-family": MONO, "font-size": 11,
+      "letter-spacing": 1.2, fill: "var(--faint)" }, "HIS BET: $100,000 OF BITCOIN"));
+
+    var ownW = barW * 0.025;
+    s.appendChild(el("rect", { x: x0 + ownW, y: barY, width: barW - ownW, height: barH,
+      fill: "var(--edge)", rx: 2 }));
+    s.appendChild(el("rect", { x: x0, y: barY, width: ownW, height: barH, fill: "var(--accent)", rx: 2 }));
+    s.appendChild(el("text", { x: x0 + ownW + 12, y: barY + barH / 2 + 5, "font-family": MONO,
+      "font-size": 13, fill: "var(--muted)" }, "$97,500 borrowed"));
+    s.appendChild(el("text", { x: x0, y: barY + barH + 18, "font-family": MONO, "font-size": 12,
+      fill: "var(--accent)", "font-weight": "700" }, "↑ $2,500 his own money"));
+
+    /* the price ruler */
+    var top = 118, bot = H - 30, cx = 150;
+    var pxNow = 210, pxLiq = 262;
+
+    s.appendChild(el("line", { x1: cx, y1: top, x2: cx, y2: bot, stroke: "var(--edge)", "stroke-width": 2 }));
+
+    /* danger zone below liq */
+    s.appendChild(el("rect", { x: cx, y: pxLiq, width: W - cx - 8, height: bot - pxLiq,
+      fill: "var(--down-soft)" }));
+
+    [[152, "$65,007", "where he bought in", "var(--faint)"],
+     [pxNow, "$64,263", "price right now", "var(--ink)"],
+     [pxLiq, "$64,171", "he gets force-sold here", "var(--down)"]
+    ].forEach(function (r, i) {
+      var y = r[0], strong = i > 0;
+      s.appendChild(el("line", { x1: cx - 10, y1: y, x2: W - 8, y2: y,
+        stroke: i === 2 ? "var(--down)" : (i === 1 ? "var(--ink)" : "var(--edge)"),
+        "stroke-width": strong ? 2 : 1,
+        "stroke-dasharray": i === 0 ? "3 4" : "none" }));
+      s.appendChild(el("text", { x: cx - 16, y: y + 4, "text-anchor": "end", "font-family": MONO,
+        "font-size": 13, "font-weight": strong ? "700" : "400",
+        fill: i === 2 ? "var(--down)" : (i === 1 ? "var(--ink)" : "var(--faint)") }, r[1]));
+      s.appendChild(el("text", { x: cx + 8, y: y - 6, "font-family": MONO, "font-size": 10.5,
+        "letter-spacing": .6, fill: i === 2 ? "var(--down)" : "var(--faint)" }, r[2].toUpperCase()));
+    });
+
+    /* the gap arrow */
+    var gx = W - 46;
+    s.appendChild(el("line", { x1: gx, y1: pxNow, x2: gx, y2: pxLiq, stroke: "var(--accent)", "stroke-width": 2 }));
+    s.appendChild(el("path", { d: "M" + (gx - 4) + " " + (pxLiq - 6) + " L" + gx + " " + pxLiq + " L" + (gx + 4) + " " + (pxLiq - 6),
+      fill: "none", stroke: "var(--accent)", "stroke-width": 2 }));
+    s.appendChild(el("text", { x: gx + 8, y: (pxNow + pxLiq) / 2 + 4, "font-family": MONO,
+      "font-size": 13, "font-weight": "700", fill: "var(--accent)" }, "0.14%"));
+
+    s.appendChild(el("text", { x: cx + 8, y: bot + 16, "font-family": MONO, "font-size": 10.5,
+      "letter-spacing": .8, fill: "var(--down)" }, "EVERYTHING BELOW THIS LINE = FORCED SELLING"));
+
+    mount("c1a", s);
+  })();
+
+  /* ============ SLIDE 2a — the punch ============ */
+  (function () {
+    var W = 560, H = 210, s = svg(W, H);
+    var rows = [
+      { k: "Just holding Bitcoin", v: 0.1, c: "var(--faint)", lab: "+0.1%" },
+      { k: "Whale at 40x leverage", v: 4, c: "var(--muted)", lab: "+4%" },
+      { k: "You, 5-min market at 50¢", v: 100, c: "var(--accent)", lab: "+100%" }
+    ];
+    var labW = 210, barMax = W - labW - 66, y = 26, gap = 58;
+    rows.forEach(function (r, i) {
+      var yy = y + i * gap;
+      s.appendChild(el("text", { x: 0, y: yy - 8, "font-family": MONO, "font-size": 11.5,
+        "letter-spacing": .5, fill: "var(--muted)" }, r.k));
+      s.appendChild(el("rect", { x: 0, y: yy, width: barMax, height: 20, fill: "var(--edge)", opacity: .35, rx: 2 }));
+      var w = Math.max(2, barMax * (r.v / 100));
+      s.appendChild(el("rect", { x: 0, y: yy, width: w, height: 20, fill: r.c, rx: 2 }));
+      s.appendChild(el("text", { x: w + 10, y: yy + 15, "font-family": MONO, "font-size": 15,
+        "font-weight": "700", fill: r.c }, r.lab));
+    });
+    s.appendChild(el("text", { x: 0, y: H - 4, "font-family": MONO, "font-size": 10.5,
+      "letter-spacing": .6, fill: "var(--faint)" }, "SAME TINY MOVE. WILDLY DIFFERENT RESULT."));
+    mount("c2a", s);
+  })();
+
+  /* ============ SLIDE 2b — 288 squares ============ */
+  (function () {
+    var cols = 24, rows = 12, cell = 20, pad = 3;
+    var W = cols * cell, H = rows * cell + 22, s = svg(W, H);
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        var i = r * cols + c;
+        s.appendChild(el("rect", {
+          x: c * cell, y: r * cell, width: cell - pad, height: cell - pad, rx: 1.5,
+          fill: i === 142 ? "var(--accent)" : "var(--edge)",
+          opacity: i === 142 ? 1 : .55
+        }));
+      }
+    }
+    s.appendChild(el("text", { x: 0, y: H - 4, "font-family": MONO, "font-size": 11,
+      "letter-spacing": .6, fill: "var(--faint)" }, "288 MARKETS A DAY — THE AMBER ONE IS TODAY'S EXAMPLE"));
+    mount("c2b", s);
+  })();
+
+  /* ============ SLIDE 3 — the ledge chart ============ */
+  (function () {
+    var SPOT = 64263.5;
+    var longs = [
+      { d: 0.14, v: 135779 }, { d: 0.17, v: 179793 }, { d: 0.22, v: 88223 },
+      { d: 0.24, v: 173009 }, { d: 0.25, v: 80788 }, { d: 0.27, v: 3861282 },
+      { d: 0.28, v: 211060 }, { d: 0.42, v: 153930 }, { d: 0.45, v: 1027376 },
+      { d: 0.46, v: 3981234 }, { d: 0.50, v: 257622 }, { d: 0.53, v: 2715630 },
+      { d: 0.55, v: 104442 }, { d: 0.56, v: 7751528 }
+    ];
+    var shorts = [
+      { d: 1.13, v: 99301 }, { d: 1.13, v: 758984 }, { d: 1.16, v: 642110 },
+      { d: 1.27, v: 221696 }, { d: 1.31, v: 508755 }, { d: 1.33, v: 146477 },
+      { d: 1.38, v: 246551 }, { d: 1.39, v: 117327 }, { d: 1.41, v: 89676 }
+    ];
+
+    var W = 560, H = 430, s = svg(W, H);
+    var midX = 210, top = 30, bot = H - 40;
+    var hiPct = 1.55, loPct = -0.75;              /* + = above spot, - = below */
+    function yOf(pct) { return top + (hiPct - pct) / (hiPct - loPct) * (bot - top); }
+    var maxV = 7751528, barMax = W - midX - 96;
+    function wOf(v) { return Math.max(3, Math.sqrt(v / maxV) * barMax); }
+
+    /* the 0.5% band */
+    s.appendChild(el("rect", { x: midX, y: yOf(0.5), width: W - midX - 8, height: yOf(-0.5) - yOf(0.5),
+      fill: "var(--accent)", opacity: .07 }));
+    s.appendChild(el("text", { x: W - 10, y: yOf(0.5) + 13, "text-anchor": "end", "font-family": MONO,
+      "font-size": 10, "letter-spacing": .8, fill: "var(--accent)" }, "THE 0.5% STRIKE ZONE"));
+
+    /* axis */
+    s.appendChild(el("line", { x1: midX, y1: top, x2: midX, y2: bot, stroke: "var(--edge)", "stroke-width": 1 }));
+
+    /* spot line */
+    var ys = yOf(0);
+    s.appendChild(el("line", { x1: 40, y1: ys, x2: W - 8, y2: ys, stroke: "var(--ink)", "stroke-width": 2 }));
+    s.appendChild(el("text", { x: 40, y: ys - 8, "font-family": MONO, "font-size": 13, "font-weight": "700",
+      fill: "var(--ink)" }, "$64,263  ← price is standing here"));
+
+    function draw(list, sign, color, dimColor) {
+      list.forEach(function (p) {
+        var pct = sign * p.d;
+        var y = yOf(pct) - 4.5;
+        var big = p.v >= 100000 && p.d <= 0.5;
+        s.appendChild(el("rect", { x: midX + 1, y: y, width: wOf(p.v), height: 9, rx: 1.5,
+          fill: big ? color : dimColor, opacity: big ? 1 : .42 }));
+        s.appendChild(el("text", { x: midX - 8, y: y + 8.5, "text-anchor": "end", "font-family": MONO,
+          "font-size": 10.5, fill: big ? color : "var(--faint)",
+          "font-weight": big ? "700" : "400" },
+          (sign > 0 ? "+" : "−") + p.d.toFixed(2) + "%"));
+        if (p.v >= 900000) {
+          s.appendChild(el("text", { x: midX + wOf(p.v) + 8, y: y + 8.5, "font-family": MONO,
+            "font-size": 11, "font-weight": "700", fill: big ? color : "var(--faint)" }, money(p.v)));
+        }
+      });
+    }
+    draw(shorts, 1, "var(--up)", "var(--up)");
+    draw(longs, -1, "var(--down)", "var(--down)");
+
+    s.appendChild(el("text", { x: 0, y: top + 4, "font-family": MONO, "font-size": 10.5,
+      "letter-spacing": .8, fill: "var(--up)" }, "SHORTS ABOVE"));
+    s.appendChild(el("text", { x: 0, y: top + 18, "font-family": MONO, "font-size": 10,
+      fill: "var(--faint)" }, "they get force-BOUGHT"));
+    s.appendChild(el("text", { x: 0, y: bot - 12, "font-family": MONO, "font-size": 10.5,
+      "letter-spacing": .8, fill: "var(--down)" }, "LONGS BELOW"));
+    s.appendChild(el("text", { x: 0, y: bot + 2, "font-family": MONO, "font-size": 10,
+      fill: "var(--faint)" }, "they get force-SOLD"));
+
+    s.appendChild(el("text", { x: midX, y: H - 8, "font-family": MONO, "font-size": 10.5,
+      "letter-spacing": .6, fill: "var(--faint)" }, "SOLID = COUNTS ($100k+ AND INSIDE 0.5%)   FADED = TOO SMALL OR TOO FAR"));
+
+    mount("c3a", s);
+  })();
+
+  /* ============ SLIDE 4 — the 5 minute timeline ============ */
+  (function () {
+    var W = 560, H = 92, s = svg(W, H);
+    var y = 34, x0 = 0, x1 = W - 8;
+    s.appendChild(el("rect", { x: x0, y: y, width: x1 - x0, height: 16, rx: 2, fill: "var(--edge)", opacity: .5 }));
+
+    var tArm = 0.16, tTrig = 0.62;
+    s.appendChild(el("rect", { x: x0 + (x1 - x0) * tTrig, y: y, width: (x1 - x0) * (1 - tTrig),
+      height: 16, rx: 2, fill: "var(--down)", opacity: .8 }));
+
+    [[tArm, "ARMED", "var(--accent)"], [tTrig, "$9,582 LIQ → BUY", "var(--down)"]].forEach(function (m) {
+      var x = x0 + (x1 - x0) * m[0];
+      s.appendChild(el("line", { x1: x, y1: y - 12, x2: x, y2: y + 28, stroke: m[2], "stroke-width": 2 }));
+      s.appendChild(el("text", { x: x + 6, y: y - 16, "font-family": MONO, "font-size": 11,
+        "font-weight": "700", "letter-spacing": .6, fill: m[2] }, m[1]));
+    });
+
+    s.appendChild(el("text", { x: x0, y: y + 34, "font-family": MONO, "font-size": 10.5,
+      fill: "var(--faint)" }, "0:00"));
+    s.appendChild(el("text", { x: x1, y: y + 34, "text-anchor": "end", "font-family": MONO,
+      "font-size": 10.5, fill: "var(--faint)" }, "5:00  MARKET CLOSES · WIN OR LOSE"));
+    s.appendChild(el("text", { x: x0 + (x1 - x0) * (tArm + .04), y: y + 12.5, "font-family": MONO,
+      "font-size": 10.5, fill: "var(--muted)" }, "watching · doing nothing"));
+    mount("c4a", s);
+  })();
+
+  /* ============ SLIDE 5 — the payoff & the break-even ============ */
+  (function () {
+    var W = 560, H = 178, s = svg(W, H);
+    var base = 118, x = 0, bw = 96, gapx = 34;
+
+    /* win bar */
+    var winH = 92, lossH = 24;
+    s.appendChild(el("rect", { x: x, y: base - winH, width: bw, height: winH, rx: 2, fill: "var(--up)" }));
+    s.appendChild(el("text", { x: x + bw / 2, y: base - winH - 10, "text-anchor": "middle",
+      "font-family": MONO, "font-size": 17, "font-weight": "700", fill: "var(--up)" }, "+$18.80"));
+    s.appendChild(el("text", { x: x + bw / 2, y: base + 16, "text-anchor": "middle", "font-family": MONO,
+      "font-size": 10.5, "letter-spacing": .6, fill: "var(--faint)" }, "IF RIGHT"));
+
+    /* loss bar */
+    x += bw + gapx;
+    s.appendChild(el("rect", { x: x, y: base, width: bw, height: lossH, rx: 2, fill: "var(--down)" }));
+    s.appendChild(el("text", { x: x + bw / 2, y: base + lossH + 16, "text-anchor": "middle",
+      "font-family": MONO, "font-size": 17, "font-weight": "700", fill: "var(--down)" }, "−$5.00"));
+    s.appendChild(el("text", { x: x + bw / 2, y: base - 8, "text-anchor": "middle", "font-family": MONO,
+      "font-size": 10.5, "letter-spacing": .6, fill: "var(--faint)" }, "IF WRONG"));
+
+    /* break-even meter */
+    var mx = x + bw + gapx + 6, mw = W - mx - 8, my = 30, mh = 22;
+    s.appendChild(el("text", { x: mx, y: my - 9, "font-family": MONO, "font-size": 10.5,
+      "letter-spacing": .8, fill: "var(--faint)" }, "HOW OFTEN WE MUST BE RIGHT"));
+    s.appendChild(el("rect", { x: mx, y: my, width: mw, height: mh, rx: 2, fill: "var(--edge)", opacity: .5 }));
+    s.appendChild(el("rect", { x: mx, y: my, width: mw * 0.21, height: mh, rx: 2, fill: "var(--accent)" }));
+    s.appendChild(el("line", { x1: mx + mw * 0.21, y1: my - 6, x2: mx + mw * 0.21, y2: my + mh + 6,
+      stroke: "var(--accent)", "stroke-width": 2 }));
+    s.appendChild(el("text", { x: mx, y: my + mh + 22, "font-family": MONO, "font-size": 13,
+      "font-weight": "700", fill: "var(--accent)" }, "21% = break even"));
+    s.appendChild(el("text", { x: mx, y: my + mh + 40, "font-family": MONO, "font-size": 11,
+      fill: "var(--muted)" }, "anything less = we lose money"));
+    s.appendChild(el("text", { x: mx, y: my + mh + 58, "font-family": MONO, "font-size": 11,
+      fill: "var(--muted)" }, "slowly, 288 times a day"));
+
+    s.appendChild(el("text", { x: 0, y: H - 4, "font-family": MONO, "font-size": 10.5,
+      "letter-spacing": .6, fill: "var(--faint)" }, "ONE $5 TRADE BOUGHT AT 21¢"));
+    mount("c5a", s);
+  })();
+
+  /* ============ deck navigation ============ */
+  var N = 5, i = 0;
+  var track = document.getElementById("track");
+  var rail = document.getElementById("rail");
+  var count = document.getElementById("count");
+  var prev = document.getElementById("prev");
+  var next = document.getElementById("next");
+  var segs = [];
+
+  for (var k = 0; k < N; k++) {
+    (function (n) {
+      var b = document.createElement("button");
+      b.className = "seg";
+      b.setAttribute("aria-label", "Go to slide " + (n + 1));
+      b.addEventListener("click", function () { go(n); });
+      rail.appendChild(b);
+      segs.push(b);
+    })(k);
+  }
+
+  function go(n) {
+    i = Math.max(0, Math.min(N - 1, n));
+    track.style.transform = "translateX(" + (-i * 20) + "%)";
+    count.textContent = (i + 1) + " / " + N;
+    prev.disabled = i === 0;
+    next.disabled = i === N - 1;
+    segs.forEach(function (s, j) { s.classList.toggle("on", j === i); });
+  }
+
+  prev.addEventListener("click", function () { go(i - 1); });
+  next.addEventListener("click", function () { go(i + 1); });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") { go(i + 1); e.preventDefault(); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") { go(i - 1); e.preventDefault(); }
+    else if (e.key === "Home") { go(0); }
+    else if (e.key === "End") { go(N - 1); }
+  });
+
+  var tx = null;
+  document.addEventListener("touchstart", function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener("touchend", function (e) {
+    if (tx === null) return;
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 60) go(i + (dx < 0 ? 1 : -1));
+    tx = null;
+  }, { passive: true });
+
+  go(0);
+})();
+</script>

@@ -4,8 +4,8 @@
 ================================================================================
 Born from honest re-resolution of the stink-bid logs against Coinbase candles
 (they only ever said FILLED/CANCELLED, never win/loss). The finding: liquidation
-continuation pays in the 0.30-0.45 band — liq fills 0.30-0.40 went 48.8% win @
-34.1c → +43% EV (n=41) — while MACD/CVD-signal fills in the same band LOST
+continuation pays in the 0.30-0.45 band, liq fills 0.30-0.40 went 48.8% win @
+34.1c → +43% EV (n=41), while MACD/CVD-signal fills in the same band LOST
 (controls prove it's the LIQ signal, not the fill mechanic). Sub-0.30 liq fills
 were toxic (16.7% win). Above 0.45 is mega_liq_continuation's thin +11% zone.
 
@@ -17,7 +17,7 @@ THE TRADE:
   - MoonDev API liquidation feed, trailing 2 minutes, BTC only.
   - longs rekt >= $25K & dominant  → price hammered → BUY DOWN (continuation)
     shorts rekt >= $25K & dominant → price ripping  → BUY UP
-  - >= $500K dominant → SKIP_MEGA (that's mega_liq_continuation's trade — don't
+  - >= $500K dominant → SKIP_MEGA (that's mega_liq_continuation's trade, don't
     double the family's exposure on the same event).
   - >= $100K dominant → 1.5x size kicker.
   - Price gate: continuation-side ask 0.30-0.45 ONLY, 60-240s left. Taker GTC.
@@ -28,12 +28,12 @@ outcomePrices 1/0; PENDING never faked; unfilled GTCs marked NO_FILL at rollover
 W / L / PENDING shown separately; P&L counts resolved only.
 
 LOGGING:
-  - data/small_liq_continuation_eval.csv   — EVERY poll: the liq tape + gates
+  - data/small_liq_continuation_eval.csv  , EVERY poll: the liq tape + gates
     (this is the dataset that validates small-liq DIRECTION standalone)
-  - data/small_liq_continuation_trades.csv — fills: signal_ask vs fill_price,
+  - data/small_liq_continuation_trades.csv, fills: signal_ask vs fill_price,
     fill_slippage, resolution persisted
 
-🔴 PAPER_MODE = False — LIVE FIRE on the AUG14 account, $5 base. Flip to True to paper.
+🔴 PAPER_MODE = False, LIVE FIRE on the AUG14 account, $5 base. Flip to True to paper.
 
 📦 DEPS: py_clob_client_v2 + MoonDevAPI (sys.path to moon-dev-trading-bots, same
 as mega_liq_continuation.py) + MOONDEV_API_KEY in the repo-root .env.
@@ -185,7 +185,7 @@ def _build_client():
 
 def place_taker_buy(token_id, price, size):
     """🌙 Moon Dev - Marketable GTC BUY (post_only=False). GTC not FAK/FOK:
-    Polymarket 400s marketable FAK/FOK when crossable < $1 — verified live."""
+    Polymarket 400s marketable FAK/FOK when crossable < $1, verified live."""
     from py_clob_client_v2.clob_types import OrderArgs, OrderType
     client = _build_client()
     order_args = OrderArgs(token_id=str(token_id), price=float(price), size=float(size), side="BUY")
@@ -196,7 +196,7 @@ def place_taker_buy(token_id, price, size):
     except Exception as e:
         err = str(e)
         if any(t in err.lower() for t in ['timeout', 'readtimeout', 'duplicated', 'request exception']):
-            log_event("⚠️ order timed out — will verify via positions", "yellow")
+            log_event("⚠️ order timed out, will verify via positions", "yellow")
             return {"status": "timeout"}
         log_event(f"❌ order failed: {type(e).__name__}: {e}", "red")
         return {}
@@ -453,7 +453,7 @@ def fresh_state():
 
 def main():
     if api is None:
-        print(colored("❌ Moon Dev - MOONDEV_API_KEY / MoonDevAPI unavailable — liq feed dead. Fix .env.", "red"))
+        print(colored("❌ Moon Dev - MOONDEV_API_KEY / MoonDevAPI unavailable, liq feed dead. Fix .env.", "red"))
         sys.exit(1)
     if not PAPER_MODE and (not os.getenv(PRIVATE_KEY_ENV_NAME) or not os.getenv(PUBLIC_KEY_ENV_NAME)):
         print(colored(f"❌ Missing {PRIVATE_KEY_ENV_NAME}/{PUBLIC_KEY_ENV_NAME} in .env", "red"))
@@ -465,7 +465,7 @@ def main():
     last_poll = 0.0
     tape = {"long": 0.0, "short": 0.0, "cont": None, "tag": "NO_LIQ", "dom": 0.0,
             "ask": None, "bid": None, "time_left": 0}
-    log_event("🌊 Small-liq continuation spinning up" + (" (PAPER)" if PAPER_MODE else " — LIVE on AUG14"), "cyan")
+    log_event("🌊 Small-liq continuation spinning up" + (" (PAPER)" if PAPER_MODE else ", LIVE on AUG14"), "cyan")
     log_event(f"🎯 liq ${LIQ_MIN_USD/1000:.0f}K-${LIQ_MEGA_USD/1000:.0f}K | ask {PRICE_ZONE[0]}-{PRICE_ZONE[1]} | {TIME_BAND[0]}-{TIME_BAND[1]}s | ${USD_SIZE}", "cyan")
 
     while True:
@@ -481,7 +481,7 @@ def main():
             S["halted"] = False
         if not S["halted"] and S["daily_pnl"] <= DAILY_STOP_LOSS:
             S["halted"] = True
-            log_event(f"🛑 DAILY STOP {S['daily_pnl']:+.2f} <= {DAILY_STOP_LOSS} — no new entries today", "red")
+            log_event(f"🛑 DAILY STOP {S['daily_pnl']:+.2f} <= {DAILY_STOP_LOSS}, no new entries today", "red")
 
         resolve_pending_trades()
 
@@ -533,7 +533,7 @@ def main():
                 action = "ASK_TOO_LOW"
                 S["ask_low"] += 1
             else:
-                # 🚀 ALL GATES PASSED — liq continuation, 0.30-0.45, in time band
+                # 🚀 ALL GATES PASSED, liq continuation, 0.30-0.45, in time band
                 kicker = dom >= KICKER_USD
                 usd = USD_SIZE * (KICKER_MULT if kicker else 1.0)
                 shares = calc_shares(usd, ask)
@@ -567,10 +567,10 @@ def main():
                         action = "FILLED"
                     else:
                         S["no_fill"] += 1
-                        log_event(f"😕 no fill @ ${ask:.3f} — missed", "yellow")
+                        log_event(f"😕 no fill @ ${ask:.3f}, missed", "yellow")
                         action = "NO_FILL"
 
-            # 🌙 log EVERY evaluation — the small-liq direction-validation dataset
+            # 🌙 log EVERY evaluation, the small-liq direction-validation dataset
             append_csv(EVAL_LOG, EVAL_FIELDS, {
                 "timestamp": datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S"),
                 "market_ts": window_ts, "slug": st["slug"] or "",
@@ -623,7 +623,7 @@ def draw(st, tape):
     clear_screen()
     draw_tracker()
     mode = colored("📝 PAPER", "yellow", attrs=['bold']) if PAPER_MODE else colored("🔴 LIVE · $5 real", "red", attrs=['bold'])
-    print(colored("\n  🌊 MOON DEV's SMALL-LIQ CONTINUATION 30-45 — the $25K-$500K hole 🌊  ", "cyan", attrs=['bold']) + mode + "\n")
+    print(colored("\n  🌊 MOON DEV's SMALL-LIQ CONTINUATION 30-45, the $25K-$500K hole 🌊  ", "cyan", attrs=['bold']) + mode + "\n")
     print(colored(f"  entries {S['entries']:<3} skips: no-liq {S['no_liq']:<4} mega {S['mega_skip']:<3} hi {S['ask_high']:<3} "
                   f"lo {S['ask_low']:<3} late {S['too_late']:<3} no-fill {S['no_fill']:<3}"
                   f"{' 🛑 DAILY STOP' if S['halted'] else ''}", "white"))
@@ -638,13 +638,13 @@ def draw(st, tape):
           + colored(f"longs rekt ${tape['long']:>10,.0f}", lcol, attrs=['bold'])
           + colored("  |  ", "white")
           + colored(f"shorts rekt ${tape['short']:>10,.0f}", scol, attrs=['bold']))
-    cont_s = tape["cont"] or "—"
-    ask_s = f"${tape['ask']:.3f}" if tape["ask"] else "—"
+    cont_s = tape["cont"] or ","
+    ask_s = f"${tape['ask']:.3f}" if tape["ask"] else ","
     status = ""
     if st["entered"]:
-        status = colored(f"  ✅ IN x{st['shares']:.0f} — riding", "green", attrs=['bold'])
+        status = colored(f"  ✅ IN x{st['shares']:.0f}, riding", "green", attrs=['bold'])
     elif tape["tag"] == "SKIP_MEGA":
-        status = colored("  🚫 MEGA territory (≥$500K) — mega_liq_continuation owns this", "yellow")
+        status = colored("  🚫 MEGA territory (≥$500K), mega_liq_continuation owns this", "yellow")
     elif tape["cont"]:
         status = colored(f"  🔥 SIGNAL → {tape['cont']}", "magenta", attrs=['bold'])
     print(colored(f"  continuation: {cont_s}  ask {ask_s}", "cyan") + status)
@@ -655,17 +655,17 @@ def draw(st, tape):
     print(colored("  └──────────────────────────────────────────────────────────────┘", "white"))
     up = (time.time() - SESSION_START) / 60
     print(colored(f"\n  🌙 liq ${LIQ_MIN_USD/1000:.0f}K-${LIQ_MEGA_USD/1000:.0f}K | ask {PRICE_ZONE[0]}-{PRICE_ZONE[1]} | "
-                  f"{TIME_BAND[0]}-{TIME_BAND[1]}s | ${USD_SIZE} base | up {up:.1f}m — Ctrl+C", "magenta"))
+                  f"{TIME_BAND[0]}-{TIME_BAND[1]}s | ${USD_SIZE} base | up {up:.1f}m, Ctrl+C", "magenta"))
 
 
 if __name__ == "__main__":
-    tag = "PAPER MODE — logging would-be fills" if PAPER_MODE else "LIVE on AUG14 (real money, $5 base)"
-    print(colored(f"🌙 Moon Dev's Small-Liq Continuation 30-45 — {tag}...", "cyan", attrs=['bold']))
+    tag = "PAPER MODE, logging would-be fills" if PAPER_MODE else "LIVE on AUG14 (real money, $5 base)"
+    print(colored(f"🌙 Moon Dev's Small-Liq Continuation 30-45, {tag}...", "cyan", attrs=['bold']))
     print(colored(f"📒 trades: {TRADES_FILE}\n📒 eval:   {EVAL_LOG}", "cyan"))
     if api is not None:
         print(colored("📡 testing liq feed...", "yellow"))
         l, s = get_btc_liquidations_2min()
-        print(colored(f"📡 liqs 2min — longs ${l:,.0f} / shorts ${s:,.0f}", "cyan"))
+        print(colored(f"📡 liqs 2min, longs ${l:,.0f} / shorts ${s:,.0f}", "cyan"))
     time.sleep(0.4)
     while True:
         try:
@@ -673,15 +673,15 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print()
             print(colored("  ╔════════════════════════════════════════════════════╗", "yellow", attrs=['bold']))
-            print(colored("  ║  🌊 MOON DEV — SMALL-LIQ CONTINUATION STOPPED 🌊   ║", "yellow", attrs=['bold']))
+            print(colored("  ║  🌊 MOON DEV, SMALL-LIQ CONTINUATION STOPPED 🌊   ║", "yellow", attrs=['bold']))
             print(colored("  ╚════════════════════════════════════════════════════╝", "yellow", attrs=['bold']))
             print(colored(f"  🎯 entries {S['entries']}  day P&L ${S['daily_pnl']:+.2f}", "green", attrs=['bold']))
             print(colored(f"  💾 {TRADES_FILE}", "cyan"))
-            print(colored("  🌙 Moon Dev out — the tape doesn't lie.", "magenta"))
+            print(colored("  🌙 Moon Dev out, the tape doesn't lie.", "magenta"))
             print()
             break
         except Exception as e:
-            print(colored(f"  💥 crashed: {type(e).__name__}: {e} — restarting in 3s", "red", attrs=['bold']))
+            print(colored(f"  💥 crashed: {type(e).__name__}: {e}, restarting in 3s", "red", attrs=['bold']))
             _CLIENT_CACHE = None
             time.sleep(3)
             continue

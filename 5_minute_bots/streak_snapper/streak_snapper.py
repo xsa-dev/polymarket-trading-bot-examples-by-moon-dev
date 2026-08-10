@@ -12,14 +12,14 @@ THESIS (mined from 1,648 live windows + 104,762 windows of 52wk real BTC data):
   resolution. Positive in all 5 backtest quarters (worst: 52.2%).
 
 RULES (do not "improve" these back out):
-  ❌ NO plain streak-counting — without the 3x ATR stretch filter edge = 50.7%
-  ❌ NEVER pay above 52c — the whole edge is 54.3% vs ~51c entry
-  ❌ NO chasing — cancel if unfilled after 60 seconds
-  ❌ NO mid-window exits — the 54.3% is measured open-to-close
+  ❌ NO plain streak-counting, without the 3x ATR stretch filter edge = 50.7%
+  ❌ NEVER pay above 52c, the whole edge is 54.3% vs ~51c entry
+  ❌ NO chasing, cancel if unfilled after 60 seconds
+  ❌ NO mid-window exits, the 54.3% is measured open-to-close
   ✅ Enter in the FIRST 20 SECONDS of the new window (near-mid liquidity lives
-     there — late-window stink bids got cancelled 95% of the time in past logs)
+     there, late-window stink bids got cancelled 95% of the time in past logs)
   ✅ One position per window max
-  ✅ Skip on any feed gap — Moon Dev NEVER trades on fake/missing data
+  ✅ Skip on any feed gap, Moon Dev NEVER trades on fake/missing data
   ✅ Winners get redeemed by the existing OG_redeem.py flow (run separately)
 
 Account: AUG14 | CLOB V2 SDK (V1 post_order now throws PolyApiException)
@@ -64,7 +64,7 @@ STREAK_MIN = 4                      # Need >= 4 consecutive same-direction windo
 STRETCH_MULT = 3.0                  # |cum 4-window move| must be > 3x the 1h ATR
 ATR_WINDOWS = 12                    # ATR = rolling mean |5-min change|, 12 windows = 1h
 CUM_WINDOWS = 4                     # Cumulative move = the streak's LAST 4 window moves
-LIMIT_CAP = 0.52                    # HARD price cap — paying 55c+ burns the 54.3% edge
+LIMIT_CAP = 0.52                    # HARD price cap, paying 55c+ burns the 54.3% edge
 ENTRY_WINDOW_SEC = 20               # Only enter in the first 20s of the new window
 CANCEL_AFTER_SEC = 60               # Unfilled after 60s → cancel, NO chasing
 SIZE_USD = 10                       # Flat $10 per trade (validation phase, first 200)
@@ -79,7 +79,7 @@ PRICE_TICK = 0.01                   # Polymarket price tick
 HISTORY_WINDOWS = 16                # Look back 16 completed windows (streak + ATR room)
 GAMMA_DIR_LOOKBACK = 8              # Ask gamma (the real oracle) for the last 8 outcomes
 
-# --- Files ---
+# === Files ===
 DATA_DIR = os.path.join(BOT_DIR, "data")
 LOG_FILE = os.path.join(DATA_DIR, "streak_snapper_log.csv")
 
@@ -144,8 +144,8 @@ def _build_client():
 
 def place_limit_buy(token_id, price, size):
     """🌙 Moon Dev - GTC limit BUY at <= 52c (post_only=False so it can cross
-    a cheap ask; FAK/FOK 400 when the crossable amount is < $1 — verified live).
-    If the book is above our price the order RESTS at our limit — exactly what
+    a cheap ask; FAK/FOK 400 when the crossable amount is < $1, verified live).
+    If the book is above our price the order RESTS at our limit, exactly what
     Streak Snapper wants at window open. Cancelled after 60s if unfilled."""
     from py_clob_client_v2.clob_types import OrderArgs, OrderType
     client = _build_client()
@@ -257,14 +257,14 @@ def get_window_history(current_ts):
     USD open/close/move from REAL Moon Dev API BTC ticks (ATR + stretch math).
     Direction from gamma (the actual oracle) for the recent windows, tick
     direction as fallback when gamma hasn't resolved yet.
-    Returns list of dicts or None on a feed gap — NO fake data, EVER."""
+    Returns list of dicts or None on a feed gap, NO fake data, EVER."""
     tick_response = api.get_ticks("BTC", "4h", limit=50000)
     if not tick_response or not isinstance(tick_response, dict):
-        print(colored("   ❌ Moon Dev - BTC tick feed is down — skipping, never faking data!", "red"))
+        print(colored("   ❌ Moon Dev - BTC tick feed is down, skipping, never faking data!", "red"))
         return None
     all_ticks = tick_response.get('ticks', [])
     if len(all_ticks) < 100:
-        print(colored(f"   ❌ Moon Dev - Only {len(all_ticks)} ticks — feed gap, skipping!", "red"))
+        print(colored(f"   ❌ Moon Dev - Only {len(all_ticks)} ticks, feed gap, skipping!", "red"))
         return None
 
     windows = []
@@ -273,7 +273,7 @@ def get_window_history(current_ts):
         w_end = w_start + MARKET_DURATION
         w_ticks = [t for t in all_ticks if w_start * 1000 <= t.get('t', 0) < w_end * 1000]
         if len(w_ticks) < 2:
-            print(colored(f"   ❌ Moon Dev - Feed gap in window {w_start} ({len(w_ticks)} ticks) — skipping signal!", "red"))
+            print(colored(f"   ❌ Moon Dev - Feed gap in window {w_start} ({len(w_ticks)} ticks), skipping signal!", "red"))
             return None
         w_ticks.sort(key=lambda t: t.get('t', 0))
         w_open = float(w_ticks[0].get('p', w_ticks[0].get('price', 0)))
@@ -385,7 +385,7 @@ def resolve_pending_trades():
 
 def kill_switch_active():
     """🌙 Moon Dev - True = PAUSE. Trailing-50 resolved win rate < 50%
-    (~2 sigma below the 54.3% backtest — stop and review per the spec)."""
+    (~2 sigma below the 54.3% backtest, stop and review per the spec)."""
     if not os.path.exists(LOG_FILE):
         return False
     df = pd.read_csv(LOG_FILE)
@@ -395,7 +395,7 @@ def kill_switch_active():
     wr = (resolved['outcome'] == 'WIN').mean()
     if wr < KILL_SWITCH_WR:
         print(colored(f"   🚨 Moon Dev - KILL SWITCH! Trailing-{len(resolved)} win rate "
-                      f"{wr*100:.1f}% < {KILL_SWITCH_WR*100:.0f}% — entries PAUSED", "red", attrs=['bold']))
+                      f"{wr*100:.1f}% < {KILL_SWITCH_WR*100:.0f}%, entries PAUSED", "red", attrs=['bold']))
         return True
     return False
 
@@ -457,7 +457,7 @@ class StreakSnapperBot:
         resolve_pending_trades()
         paused = kill_switch_active()
 
-        # --- SIGNAL: last 16 windows of REAL data ---
+        # === SIGNAL: last 16 windows of REAL data ===
         windows = get_window_history(market_ts)
         if windows is None:
             log_row(slug, None, None, None, None, None, None, None, "SKIP_FEED_GAP")
@@ -477,14 +477,14 @@ class StreakSnapperBot:
 
         fade_side = "DOWN" if streak_dir == "UP" else "UP"
         print(colored(f"🌙 Moon Dev's Streak Snapper: {streak_len} straight {streak_dir}s, "
-                      f"stretched {stretch:.1f}x ATR — snapping back with {fade_side} @ {int(LIMIT_CAP*100)}c!",
+                      f"stretched {stretch:.1f}x ATR, snapping back with {fade_side} @ {int(LIMIT_CAP*100)}c!",
                       "magenta", attrs=['bold']))
 
         if paused:
             log_row(slug, streak_len, streak_dir, cum_move, atr, stretch, fade_side, None, "KILL_SWITCH")
             return
 
-        # --- Must fire within the first 20 seconds of the window ---
+        # === Must fire within the first 20 seconds of the window ===
         market_info = None
         while time.time() - market_ts <= ENTRY_WINDOW_SEC:
             market_info = get_market_info(market_ts)
@@ -494,11 +494,11 @@ class StreakSnapperBot:
             time.sleep(2)
         if not market_info:
             log_row(slug, streak_len, streak_dir, cum_move, atr, stretch, fade_side, None, "SKIP_NO_MARKET")
-            print(colored("   ❌ Moon Dev - Couldn't find the market inside 20s — no chasing!", "red"))
+            print(colored("   ❌ Moon Dev - Couldn't find the market inside 20s, no chasing!", "red"))
             return
         if time.time() - market_ts > ENTRY_WINDOW_SEC:
             log_row(slug, streak_len, streak_dir, cum_move, atr, stretch, fade_side, None, "SKIP_LATE")
-            print(colored("   ⏰ Moon Dev - Missed the 20s open window — no chasing!", "yellow"))
+            print(colored("   ⏰ Moon Dev - Missed the 20s open window, no chasing!", "yellow"))
             return
 
         token_id = market_info['up_token_id'] if fade_side == "UP" else market_info['down_token_id']
@@ -514,7 +514,7 @@ class StreakSnapperBot:
                       "green" if fade_side == "UP" else "red", attrs=['bold']))
         print(colored(f"   🔗 https://polymarket.com/event/{slug}", "cyan"))
 
-        # --- Place + 60s fuse ---
+        # === Place + 60s fuse ===
         if PAPER_MODE:
             filled = ask is not None and ask <= limit_price
             print(colored(f"   📄 Moon Dev - PAPER MODE: {'simulated fill' if filled else 'NO FILL (ask above cap)'}", "yellow", attrs=['bold']))
@@ -543,7 +543,7 @@ class StreakSnapperBot:
         held = shares if PAPER_MODE else get_position_size(token_id)
         log_row(slug, streak_len, streak_dir, cum_move, atr, stretch, fade_side, limit_price,
                 "ENTER", entry_price=limit_price, shares=held, outcome='PENDING')
-        print(colored(f"   🎲 Moon Dev - FILLED {held} {fade_side} — holding to resolution "
+        print(colored(f"   🎲 Moon Dev - FILLED {held} {fade_side}, holding to resolution "
                       f"(no mid-window exits, the 54.3% is open-to-close)", "white", attrs=['bold']))
 
 # ============================================================================
@@ -576,7 +576,7 @@ def main():
     print(colored("\n📡 Moon Dev - Testing BTC tick feed...", "yellow", attrs=['bold']))
     windows = get_window_history(get_current_market_timestamp())
     if windows is None:
-        print(colored("❌ Moon Dev - Window history feed is dead — refusing to run on no data!", "red"))
+        print(colored("❌ Moon Dev - Window history feed is dead, refusing to run on no data!", "red"))
         sys.exit(1)
     streak_len, streak_dir, cum_move, atr, stretch, signal = compute_signal(windows)
     print(colored(f"   ✅ {len(windows)} windows loaded | streak {streak_len}x {streak_dir} | "
@@ -599,7 +599,7 @@ def main():
                 last_processed_ts = market_ts
                 bot.run_window(market_ts)
             elif market_ts != last_processed_ts:
-                # started mid-window — mark it seen, wait for the next open
+                # started mid-window, mark it seen, wait for the next open
                 last_processed_ts = market_ts
                 print(colored(f"   ⏰ Moon Dev - {elapsed}s into window {market_ts}, waiting for the next open...", "yellow"))
 

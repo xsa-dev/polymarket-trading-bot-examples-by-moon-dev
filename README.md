@@ -1,4 +1,4 @@
-# 🌙 Polymarket Trading Bot Examples — by Moon Dev
+# 🌙 Polymarket Trading Bot Examples, by Moon Dev
 
 Open-source Polymarket trading bot infrastructure, built **live on YouTube** by Moon Dev.
 
@@ -10,16 +10,16 @@ overnight.** Not me, not anyone. If someone tells you otherwise, they are sellin
 something.
 
 What this repo IS: real infrastructure and real bots that Moon Dev has been building
-live on stream — the wins, the losses, the breakeven grinders, and the autopsies of the
+live on stream, the wins, the losses, the breakeven grinders, and the autopsies of the
 bots that didn't work. Since I'm doing all this hard work live on YouTube anyway, I might
 as well share it to save you some time. That's the whole deal.
 
-- 🚫 **This is NOT financial advice.** None of it. Ever.
-- 🚫 **These bots are NOT profitable money printers.** Several of them exist precisely
+* 🚫 **This is NOT financial advice.** None of it. Ever.
+* 🚫 **These bots are NOT profitable money printers.** Several of them exist precisely
   because a previous version LOST money and taught us something.
-- ⚠️ **Use any of this in your own system 100% at your own risk.** Trading is risky.
+* ⚠️ **Use any of this in your own system 100% at your own risk.** Trading is risky.
   Prediction markets are risky. Automated trading is riskier. You can and will lose money.
-- 🔧 Expect to do real work: get your own API keys, wire up your own accounts, read the
+* 🔧 Expect to do real work: get your own API keys, wire up your own accounts, read the
   code, understand every line before you run it with a single dollar.
 
 Got questions? Join the Zoom call: **https://moondev.com/t/polymarket-github**
@@ -36,17 +36,17 @@ Got questions? Join the Zoom call: **https://moondev.com/t/polymarket-github**
 ```
 
 Every bot folder contains:
-- **README.md** — what the strategy does, in plain english, why it exists, and the real
-  numbers behind it (zero synthetic data — that's a hard rule around here)
-- **the bot code** — heavily commented, logs every window (entries AND skips) to CSV
+* **README.md**, what the strategy does, in plain english, why it exists, and the real
+  numbers behind it (zero synthetic data, that's a hard rule around here)
+* **the bot code**, heavily commented, logs every window (entries AND skips) to CSV
 
 ## Setup (the honest version)
 
 1. Copy `.env_example` to `.env` and fill in **your own** keys. The `.env` file is
-   gitignored — never, ever commit secrets. Ever.
-2. These bots use the **V2 Polymarket CLOB SDK** (`py_clob_client_v2`) — the V1 client's
+   gitignored, never, ever commit secrets. Ever.
+2. These bots use the **V2 Polymarket CLOB SDK** (`py_clob_client_v2`), the V1 client's
    order placement is dead (throws `PolyApiException`).
-3. Some bots need the Moon Dev API for liquidation/tick feeds (`MOONDEV_API_KEY`) — you'll
+3. Some bots need the Moon Dev API for liquidation/tick feeds (`MOONDEV_API_KEY`), you'll
    need your own data source or key there.
 4. Paths, python env (`tflow` conda env), and account naming (`_AUG14` suffix) are from
    Moon Dev's machine. **You will need to adapt them.** See "nothing plug-and-play," above.
@@ -60,13 +60,12 @@ logs crown a winner (or, more often, teach us why the idea was wrong) → repeat
 IS the product. A bot that loses money but logs every decision is worth more than a bot
 that "wins" and can't tell you why.
 
-If that iteration grind sounds less sexy than "run this bot, get rich" — good. That's the
+If that iteration grind sounds less sexy than "run this bot, get rich", good. That's the
 point. That's what real algo trading looks like.
 
 Questions, ideas, want to watch this get built? Zoom call link:
 **https://moondev.com/t/polymarket-github**
 
----
-
-*Built live on YouTube by Moon Dev 🌙 — not financial advice, no warranties, use at your
+***
+*Built live on YouTube by Moon Dev 🌙, not financial advice, no warranties, use at your
 own risk. Every market decision you make is yours alone.*

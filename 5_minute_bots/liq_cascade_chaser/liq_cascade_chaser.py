@@ -8,21 +8,21 @@ Liquidation-aligned TAKER at 0.50-0.85 in minutes 0-3 of BTC 5-minute markets.
 THESIS (from 187 real liq signals + 52 weeks of 1-min BTC candles):
   Liquidations were the ONLY signal with real directional edge (58.8% vs
   coin-flip CVD 51.4% / MACD 52.4%). What lost money fleet-wide was the
-  30%-pullback STINK BID (34.2% wr on fills — you miss the winners and own
+  30%-pullback STINK BID (34.2% wr on fills, you miss the winners and own
   the losers). Cascades continue to window close ~95% of the time
   (0.15%+ move w/ 3x volume, n=1,029), but Polymarket prices the aligned
   side at only 50-85c early in the window. Pay the taker fee, buy the
   winner WHILE it's winning.
 
-RULES (learned from the March 2026 fleet autopsy — do not "improve" back in):
+RULES (learned from the March 2026 fleet autopsy, do not "improve" back in):
   ❌ NO stink bids. Ever. That was the whole bug.
-  ❌ NO entries below 0.50 — market disagrees with the liq → it loses (-EV)
-  ❌ NO entries above 0.85 — fee eats the edge + never buy the late favorite
-  ❌ NO entries after minute 3 — late fills went 0-for-2
+  ❌ NO entries below 0.50, market disagrees with the liq → it loses (-EV)
+  ❌ NO entries above 0.85, fee eats the edge + never buy the late favorite
+  ❌ NO entries after minute 3, late fills went 0-for-2
   ✅ Liq total ≥ $10k in trailing 2 min (sub-10k fills won only 24.2%)
   ✅ Window move ≥ 0.15% in liq direction + elevated tick rate (95% signature)
   ✅ LONG_LIQ → buy DOWN | SHORT_LIQ → buy UP (cascade continuation)
-  ✅ Hold to resolution — 71.7-87.0% measured win rates, no scratch-outs
+  ✅ Hold to resolution, 71.7-87.0% measured win rates, no scratch-outs
   ✅ Daily stop -$60 → done for the day, print the loss table
 
 Account: AUG14 | CLOB V2 SDK (V1 post_order now throws PolyApiException)
@@ -67,28 +67,28 @@ MIN_LIQ_USD = 10_000                # Trailing-2-min BTC liq total must be ≥ $
 LIQ_LOOKBACK_SEC = 120              # Trailing 2 minutes of liquidations
 LIQ_TIMEFRAME = "10m"               # API's smallest liq window, we filter to 2 min
 
-PRICE_ZONE = (0.50, 0.85)           # Aligned ask band — below 0.50 market disagrees,
+PRICE_ZONE = (0.50, 0.85)           # Aligned ask band, below 0.50 market disagrees,
                                     # above 0.85 fee eats the edge. HARD limits.
 MIN_MOVE_PCT = 0.15                 # Window move so far must be ≥ 0.15% in liq direction
 VOLUME_MULT = 2.0                   # In-window tick rate ≥ 2x trailing-1h rate = elevated
 MAX_ELAPSED = 180                   # Minutes 0-3 ONLY (elapsed seconds into window)
 MIN_ELAPSED = 10                    # Need a few ticks to establish the window open
-MAX_SPREAD = 0.05                   # Skip if spread > 5c — book too thin to take
+MAX_SPREAD = 0.05                   # Skip if spread > 5c, book too thin to take
 FILL_WAIT_SEC = 5                   # Unfilled after 5s → cancel, skip window
 
 BASE_SIZE_USD = 15                  # Flat $15 per trade (matches the +$57 liq bot sizing)
 DAILY_STOP_USD = -60                # Down $60 on the day → shut it down, print loss table
 
 KILL_SWITCH_WR = 0.50               # Pause entries if trailing-30 win rate < 50%
-KILL_SWITCH_WINDOW = 30             # (breakeven at avg 0.65 entry is ~65% — 50% = broken)
+KILL_SWITCH_WINDOW = 30             # (breakeven at avg 0.65 entry is ~65%, 50% = broken)
 KILL_SWITCH_MIN_TRADES = 15
 
-BOT_POLL_INTERVAL = 5               # Cascades are fast — poll every 5s
+BOT_POLL_INTERVAL = 5               # Cascades are fast, poll every 5s
 MARKET_DURATION = 300               # btc-updown-5m markets = 300 seconds
 MIN_SHARES = 5                      # Polymarket minimum order size
 STATS_EVERY = 10                    # Rolling bucket stats every N resolved trades
 
-# --- Files ---
+# === Files ===
 DATA_DIR = os.path.join(BOT_DIR, "data")
 SIGNAL_LOG_FILE = os.path.join(DATA_DIR, "liq_cascade_signals.csv")
 TRADES_FILE = os.path.join(DATA_DIR, "liq_cascade_chaser_trades.csv")
@@ -113,7 +113,7 @@ if not api.api_key:
 print(colored("✅ Moon Dev - Moon Dev API loaded!", "green"))
 
 # ============================================================================
-# 🌙 MOON DEV - V2 CLOB CLIENT (taker orders — V1 post_order is dead)
+# 🌙 MOON DEV - V2 CLOB CLIENT (taker orders, V1 post_order is dead)
 # ============================================================================
 _CLIENT_CACHE = None
 
@@ -156,7 +156,7 @@ def place_taker_buy(token_id, price, size):
     """🌙 Moon Dev - Marketable GTC BUY that CROSSES the ask (post_only=False).
 
     Why GTC and not FAK/FOK: Polymarket 400s marketable FAK/FOK orders when the
-    crossable amount is < $1 — verified live. GTC crosses just the same and any
+    crossable amount is < $1, verified live. GTC crosses just the same and any
     unfilled remainder rests at our price (we cancel it after FILL_WAIT_SEC)."""
     from py_clob_client_v2.clob_types import OrderArgs, OrderType
     client = _build_client()
@@ -248,7 +248,7 @@ def check_liq_signal():
 def get_window_tape(market_ts):
     """🌙 Moon Dev - From the real tick feed: window move % so far + tick-rate
     multiple vs the trailing hour. Returns (move_pct, rate_mult, n_window_ticks)
-    or (None, None, 0) when the feed is thin — we SKIP on no data, never fake it."""
+    or (None, None, 0) when the feed is thin, we SKIP on no data, never fake it."""
     tick_response = api.get_ticks("BTC", "1h", limit=10000)
     if not tick_response or not isinstance(tick_response, dict):
         return None, None, 0
@@ -365,7 +365,7 @@ def log_signal(slug, liq_type, liq_usd, long_liq, short_liq, move_pct, rate_mult
 
 def log_trade_entry(market_ts, slug, side, liq_type, liq_usd, move_pct, ask, shares, size_usd, paper):
     """🌙 Moon Dev - Record an entry for resolution grading + kill-switch math.
-    Outcome logging at resolution is MANDATORY — the March fleet never logged
+    Outcome logging at resolution is MANDATORY, the March fleet never logged
     outcomes and it took candle forensics to grade it. Never again."""
     os.makedirs(DATA_DIR, exist_ok=True)
     row = pd.DataFrame([{
@@ -451,7 +451,7 @@ def daily_stop_hit():
     pnl = todays_pnl()
     if pnl > DAILY_STOP_USD:
         return False
-    print(colored(f"\n   🛑 Moon Dev - DAILY STOP HIT! Today's PnL ${pnl:+.2f} ≤ ${DAILY_STOP_USD} — done for the day.",
+    print(colored(f"\n   🛑 Moon Dev - DAILY STOP HIT! Today's PnL ${pnl:+.2f} ≤ ${DAILY_STOP_USD}, done for the day.",
                   "red", attrs=['bold']))
     df = pd.read_csv(TRADES_FILE)
     df['ts'] = pd.to_datetime(df['timestamp'])
@@ -466,7 +466,7 @@ def daily_stop_hit():
 
 def kill_switch_active():
     """🌙 Moon Dev - True = PAUSE. Trailing-30 resolved win rate < 50%
-    (breakeven at avg 0.65 entry is ~65% — 50% means the edge is broken)."""
+    (breakeven at avg 0.65 entry is ~65%, 50% means the edge is broken)."""
     if not os.path.exists(TRADES_FILE):
         return False
     df = pd.read_csv(TRADES_FILE)
@@ -476,7 +476,7 @@ def kill_switch_active():
     wr = (resolved['result'] == 'WIN').mean()
     if wr < KILL_SWITCH_WR:
         print(colored(f"   🚨 Moon Dev - KILL SWITCH! Trailing-{len(resolved)} win rate "
-                      f"{wr*100:.1f}% < {KILL_SWITCH_WR*100:.0f}% — entries PAUSED", "red", attrs=['bold']))
+                      f"{wr*100:.1f}% < {KILL_SWITCH_WR*100:.0f}%, entries PAUSED", "red", attrs=['bold']))
         return True
     return False
 
@@ -560,10 +560,10 @@ class LiqCascadeChaser:
         slug = self.market_info['slug']
         token_id = self.market_info['up_token_id'] if direction == "UP" else self.market_info['down_token_id']
 
-        # --- GATE 1: tape confirmation (0.15% move in liq direction + elevated rate) ---
+        # === GATE 1: tape confirmation (0.15% move in liq direction + elevated rate) ===
         move_pct, rate_mult, n_ticks = get_window_tape(market_ts)
         if move_pct is None:
-            print(colored(f"   📡 Moon Dev - Tick feed too thin ({n_ticks} window ticks) — no data, no trade!", "yellow"))
+            print(colored(f"   📡 Moon Dev - Tick feed too thin ({n_ticks} window ticks), no data, no trade!", "yellow"))
             log_signal(slug, liq_type, liq_usd, long_liq, short_liq, None, None,
                        direction, None, None, elapsed, 0, "SKIP_NO_TAPE")
             return
@@ -575,7 +575,7 @@ class LiqCascadeChaser:
                        direction, None, None, elapsed, 0, "SKIP_TAPE")
             return
 
-        # --- GATE 2: price zone 0.50-0.85 on the ACTUAL ask ---
+        # === GATE 2: price zone 0.50-0.85 on the ACTUAL ask ===
         book = get_order_book(token_id)
         ask = book['best_ask'] if book else None
         spread = book['spread'] if book else None
@@ -583,18 +583,18 @@ class LiqCascadeChaser:
             log_signal(slug, liq_type, liq_usd, long_liq, short_liq, move_pct, rate_mult,
                        direction, ask, spread, elapsed, 0, "SKIP_PRICE")
             if ask is not None:
-                reason = "market DISAGREES with the liq — it loses" if ask < PRICE_ZONE[0] \
+                reason = "market DISAGREES with the liq, it loses" if ask < PRICE_ZONE[0] \
                     else "edge gone after fees + never buy the late favorite"
                 print(colored(f"   🙅 Moon Dev - Ask ${ask:.2f} outside {PRICE_ZONE[0]:.2f}-{PRICE_ZONE[1]:.2f} ({reason})", "yellow"))
             return
 
-        # --- GATE 3: spread ---
+        # === GATE 3: spread ===
         if spread > MAX_SPREAD:
             log_signal(slug, liq_type, liq_usd, long_liq, short_liq, move_pct, rate_mult,
                        direction, ask, spread, elapsed, 0, "SKIP_SPREAD")
             return
 
-        # --- ALL GATES PASSED → CHASE THE CASCADE 🚀 ---
+        # === ALL GATES PASSED → CHASE THE CASCADE 🚀 ===
         shares = max(MIN_SHARES, math.floor(BASE_SIZE_USD / ask))
         fee = taker_fee_est(ask, shares)
         print(colored(f"\n   🌊🌊🌊 MOON DEV CASCADE: {liq_type} ${liq_usd:,.0f} | BTC {move_pct:+.3f}% into window "
@@ -615,7 +615,7 @@ class LiqCascadeChaser:
             time.sleep(FILL_WAIT_SEC)
             held = get_position_size(token_id)
             if held <= 0:
-                print(colored(f"   ⏱️ Moon Dev - No fill after {FILL_WAIT_SEC}s (book moved) — cancelling, skipping window", "yellow"))
+                print(colored(f"   ⏱️ Moon Dev - No fill after {FILL_WAIT_SEC}s (book moved), cancelling, skipping window", "yellow"))
                 cancel_token_orders(token_id)
                 log_signal(slug, liq_type, liq_usd, long_liq, short_liq, move_pct, rate_mult,
                            direction, ask, spread, elapsed, 0, "NO_FILL")
@@ -633,7 +633,7 @@ class LiqCascadeChaser:
         log_trade_entry(market_ts, slug, direction, liq_type, liq_usd, move_pct, ask, shares,
                         shares * ask, PAPER_MODE)
         wr_note = "71.7%" if ask < 0.70 else "87.0%"
-        print(colored(f"   💰 Moon Dev riding the cascade — measured pocket wr {wr_note}, holding to resolution!", "green"))
+        print(colored(f"   💰 Moon Dev riding the cascade, measured pocket wr {wr_note}, holding to resolution!", "green"))
 
     def run_market_cycle(self, market_ts):
         """🌙 Moon Dev - One full 5-minute market window"""
@@ -678,7 +678,7 @@ class LiqCascadeChaser:
                     cancel_token_orders(self.entry_token_id)  # clean GTC remainder
                 if self.entry_side:
                     print(colored(f"   🎲 Moon Dev - Holding {self.entry_side} to resolution "
-                                  f"(no scratch-outs — exiting into cascade chop donates spread)", "white"))
+                                  f"(no scratch-outs, exiting into cascade chop donates spread)", "white"))
                 break
 
             if self.window_done:
@@ -693,7 +693,7 @@ class LiqCascadeChaser:
 
             # 🌙 Moon Dev - minutes 0-3 ONLY (late fills went 0-for-2 in the logs)
             if elapsed > MAX_ELAPSED:
-                print(colored(f"   ⏳ Moon Dev - Past minute 3 ({elapsed}s in) — watching only, no late entries", "white"))
+                print(colored(f"   ⏳ Moon Dev - Past minute 3 ({elapsed}s in), watching only, no late entries", "white"))
                 time.sleep(time_remaining if time_remaining < BOT_POLL_INTERVAL else BOT_POLL_INTERVAL)
                 continue
             if elapsed < MIN_ELAPSED:
@@ -701,7 +701,7 @@ class LiqCascadeChaser:
                 continue
 
             if paused:
-                print(colored(f"   🚨 Kill switch active — watching, not trading ({time_remaining}s left)", "red"))
+                print(colored(f"   🚨 Kill switch active, watching, not trading ({time_remaining}s left)", "red"))
                 time.sleep(BOT_POLL_INTERVAL)
                 continue
 
@@ -752,9 +752,9 @@ def main():
     tick_response = api.get_ticks("BTC", "1h", limit=10000)
     all_ticks = tick_response.get('ticks', []) if isinstance(tick_response, dict) else []
     if len(all_ticks) < 10:
-        print(colored("❌ Moon Dev - Tick feed is dead — refusing to run on no data!", "red"))
+        print(colored("❌ Moon Dev - Tick feed is dead, refusing to run on no data!", "red"))
         sys.exit(1)
-    print(colored(f"   BTC ticks (1h): {len(all_ticks)} — feed healthy ✅", "cyan"))
+    print(colored(f"   BTC ticks (1h): {len(all_ticks)}, feed healthy ✅", "cyan"))
 
     print(colored(f"\n{'='*70}", "green"))
     print(colored("🚀 Moon Dev - LIQ CASCADE CHASER LIVE! Buying winners WHILE they're winning...", "green", attrs=['bold']))
