@@ -146,6 +146,32 @@ python flip_harvester.py             # PAPER_MODE = True is the default
 * With no network at all it does not crash — it sits on "waiting for strike/spot" and
   logs nothing, because there is nothing honest to log.
 
+## Reading the run: `analyze_run.py`
+
+```bash
+python analyze_run.py            # the paper CSVs
+python analyze_run.py --live     # the live ones
+```
+
+Raw CSVs won't tell you anything by eye, and **the P&L column is actively
+misleading** for the first ~1,200 trades — per-trade noise is ~$13 against an edge of
+at most $0.77. The analyzer answers the four questions that actually decide it, each
+with a confidence interval and an explicit "not enough data yet" when the sample is
+too small to say:
+
+1. **The funnel** — is the gate firing at all, and which skip reason is the binding
+   constraint?
+2. **Does the book ever BID 0.62 during a flip?** The distribution of
+   `max_bid_after_touch` and the fill rate `f` at 0.60 / 0.62 / 0.65. If the bid
+   rarely gets there, the idea is dead and you learned it for free.
+3. **`q` = P(dog won | we sold it).** The harvest is +EV iff `q < ask`. Needs ~600
+   resolved sells to resolve to ±4 points — this is the expensive question, so only
+   ask it after (2) and (4) survive.
+4. **The realized entry price and dog win rate on YOUR population** — the base edge,
+   worth ~3× the harvest, and the one measured on n=56 in the source doc.
+
+Kill it early on (2) or (4). Either one ends the experiment cheaply.
+
 ## What to read in the logs
 
 * `data/flip_harvester_eval[_paper].csv` — every window, entries AND skips, with the
