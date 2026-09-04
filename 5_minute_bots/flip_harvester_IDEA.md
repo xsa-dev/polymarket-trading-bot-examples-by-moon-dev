@@ -3,6 +3,10 @@
 **Author lens:** the UNDERDOG edge. The july_17th fleet proved the 20-45c coin-flip dog is
 +EV. This is the NEXT iteration of that pocket, built for Moon Dev, July 18, 2026.
 
+**Status: built.** See [`flip_harvester/`](flip_harvester/) for the running bot (ships in
+`PAPER_MODE = True` — the 62c exit is unproven live, this doc is still the full research
+record behind it).
+
 ***
 ## Bot Name
 

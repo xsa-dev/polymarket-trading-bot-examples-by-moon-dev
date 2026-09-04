@@ -70,10 +70,16 @@ whole deliverable. Also the folder where a feed-latency bug ate an entire live s
 a $715k liquidation the bot never saw because the data arrived 150 seconds late. That
 autopsy, and the `--lagcheck` tool that found it, are in the README.
 
-### 💡 `flip_harvester_IDEA.md`, researched, not built yet
-Coin-flip underdogs touch the lead 71% of the time but only win 42%, so sell the touch
-instead of holding to resolution. Full research is in the doc if you want to build it
-before I do.
+### 💎 [`flip_harvester/`](flip_harvester/), the coin-flip dog's exit engine
+Coin-flip underdogs touch the lead 71.3% of the time but only win 42.4% (n=10,180) — a
+29-point gap that every dog bot in the fleet leaves on the table by holding to
+resolution. This one buys the identical proven dog gate, then rests a maker sell at 0.62
+the instant the buy fills: HIGH-vol windows harvest 100% of shares (touches fade back
+there), LOW-vol windows harvest half and hold half (touches stick there). Degrades
+gracefully into the incumbent hold-to-resolution bot if the sell never fills. Built
+straight from `flip_harvester_IDEA.md`'s research, **no live data exists yet on whether
+the book ever really bids 62c during a flip** — that's the whole experiment, ships in
+`PAPER_MODE = True` until the eval CSV says otherwise.
 
 ## Reality check (again, on purpose)
 
