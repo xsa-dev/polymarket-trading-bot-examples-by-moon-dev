@@ -74,12 +74,12 @@ autopsy, and the `--lagcheck` tool that found it, are in the README.
 Coin-flip underdogs touch the lead 71.3% of the time but only win 42.4% (n=10,180) — a
 29-point gap that every dog bot in the fleet leaves on the table by holding to
 resolution. This one buys the identical proven dog gate, then rests a maker sell at 0.62
-the instant the buy fills: HIGH-vol windows harvest 100% of shares (touches fade back
-there), LOW-vol windows harvest half and hold half (touches stick there). Degrades
-gracefully into the incumbent hold-to-resolution bot if the sell never fills. Built
-straight from `flip_harvester_IDEA.md`'s research, **no live data exists yet on whether
-the book ever really bids 62c during a flip** — that's the whole experiment, ships in
-`PAPER_MODE = True` until the eval CSV says otherwise.
+the instant the buy fills, harvesting the flip instead of praying for the close. It
+degrades gracefully into the incumbent hold-to-resolution bot if the sell never fills.
+**Written by an AI assistant from [`flip_harvester_IDEA.md`](flip_harvester_IDEA.md), and
+never run — not live, not paper.** The numbers above are inherited from that doc, not
+measured by the bot; the README works through where the source arithmetic doesn't hold
+(it harvests nothing in low vol as a result). Ships in `PAPER_MODE = True`.
 
 ## Reality check (again, on purpose)
 
