@@ -133,6 +133,23 @@ carries the feature columns plus `touched` and `dog_won`. It scores itself by pr
 validation: predict first, then learn, so every number it prints was made on data the
 model had not seen.
 
+### Pulling history out of your own bot service
+
+`export_from_service.py` turns a running service (anything serving `/openapi.json`) into a
+replay CSV:
+
+```bash
+python export_from_service.py --url http://dragon:8787 --inspect     # what does it return?
+python export_from_service.py --url http://dragon:8787     --pull /api/polymarket/fleet/fills --out flip_history.csv --groups core
+python flip_harvester_ml.py --replay flip_history.csv --groups core
+```
+
+It guesses column names from an alias table and **prints every guess** (`--map ours=theirs`
+overrides any of them). What it will not do is invent a label: if the history has no
+`touched` column, it says so and stops, because `touched` is specific to this bot and
+almost nothing else logs it. In that case the honest path is to let the bot label its own
+windows in `PAPER_MODE` for a few hundred windows, which is what the cold start is for.
+
 ## The log is the deliverable
 
 One row per window, entries AND skips, in `data/flip_harvester_ml_log.csv`. The columns
