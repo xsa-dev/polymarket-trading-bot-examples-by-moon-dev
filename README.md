@@ -32,7 +32,8 @@ Got questions? Join the Zoom call: **https://moondev.com/t/polymarket-github**
 │   ├── liq_cascade_chaser/   ← one folder per strategy:
 │   ├── streak_snapper/          README (what it does + the data behind it)
 │   ├── box_builder/             + the bot code
-│   └── corridor_collector/
+│   ├── corridor_collector/
+│   └── flip_harvester_ml/    ← the river online-learning one (needs `river` + `polars`)
 ```
 
 Every bot folder contains:

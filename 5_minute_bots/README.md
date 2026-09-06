@@ -70,10 +70,23 @@ whole deliverable. Also the folder where a feed-latency bug ate an entire live s
 a $715k liquidation the bot never saw because the data arrived 150 seconds late. That
 autopsy, and the `--lagcheck` tool that found it, are in the README.
 
-### 💡 `flip_harvester_IDEA.md`, researched, not built yet
-Coin-flip underdogs touch the lead 71% of the time but only win 42%, so sell the touch
-instead of holding to resolution. Full research is in the doc if you want to build it
-before I do.
+### 🌾 [`flip_harvester_ml/`](flip_harvester_ml/), the exit engine that learns
+`flip_harvester_IDEA.md`, built, with its two hardcoded numbers handed to
+[river](https://riverml.xyz) online models. Coin-flip dogs TOUCH the strike 71.3% of the
+time but only WIN 42.4% (n=10,180 real windows), so this one rests a maker sell the moment
+the dog fills and harvests the touch instead of praying for the close. The doc's flat 0.62
+ask and its high-vol/low-vol size split are both estimates of P(win | touched), so two
+logistic regressions learn that number window by window and price the exit themselves,
+floored at 0.60 forever because 0.5947 is the breakeven vs simply holding. An ADWIN drift
+detector yanks the model back to the static rules when the edge decays. Hyperliquid
+microstructure, technical indicators and cross-asset correlation are switchable feature
+groups (`--groups core,ta,hl,corr`). The ML layer has **no backtest**, it starts at the
+backtest priors and learns from real fills; the log is the deliverable.
+
+### 💡 `flip_harvester_IDEA.md`, the research doc behind it
+The full underdog-exit research: the 29-point touch-vs-win gap, the EV table, the vol
+split, and the adverse-selection risk. Built as `flip_harvester_ml/` above, but read the
+doc first, it is where the numbers come from.
 
 ## Reality check (again, on purpose)
 
