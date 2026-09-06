@@ -112,6 +112,7 @@ sys.path.insert(0, MOON_DEV_API_PATH)
 # 🌙 MOON DEV - KEY PARAMS (entry gates are INHERITED, the exit is the experiment)
 # ============================================================================
 PAPER_MODE = True                   # 🌙 Brand new bot + unproven ML layer = paper first.
+BTC_FEED = os.getenv("FLIP_BTC_FEED", "auto")   # auto | moondev | binance (see get_btc_ticks)
 
 # === Entry gate (coinflip_discount_dog's proven gate, unchanged, DO NOT loosen) ===
 MAX_COA = 0.20                      # |cushion| / ATR4 ≤ 0.20 (the coin-flip pocket)
@@ -295,12 +296,92 @@ def get_position_size(token_id):
 # ============================================================================
 
 
+BINANCE_KLINES = "https://api.binance.com/api/v3/klines"
+_TICK_CACHE = {'at': 0.0, 'ticks': []}
+TICK_CACHE_TTL = 5          # seconds; one loop asks for the tape up to 3 times
+
+
+def _moondev_available():
+    """🌙 Moon Dev - Is the Moon Dev tape actually usable on THIS box? No key or no
+    api.py (it does not ship in this repo) means no, and we say so instead of dying."""
+    if not os.getenv("MOONDEV_API_KEY"):
+        return False
+    try:
+        import api  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def _binance_ticks(lookback_sec=3600):
+    """🌙 Moon Dev - The keyless BTC tape: Binance 1s klines, no account, no key.
+
+    One kline per second becomes four ticks (open, low, high, close) so that the
+    1-minute high/low ATR4 is built from, and the strike crossing did_dog_touch
+    looks for, both survive at 1-second resolution.
+
+    Each second's REAL trade count rides along as `n`. rate_mult is a tick-RATE
+    feature: a synthetic 4-ticks-per-second tape would pin it at exactly 1.0
+    forever and feed the model a dead column. The trade count is the honest
+    stand-in, and it is the only thing `n` is used for."""
+    out, end = [], int(time.time() * 1000)
+    floor_ms = end - lookback_sec * 1000
+    while end > floor_ms:
+        try:
+            rows = requests.get(BINANCE_KLINES, params={
+                'symbol': 'BTCUSDT', 'interval': '1s',
+                'endTime': end, 'limit': 1000}, timeout=10).json()
+        except Exception as e:
+            print(colored(f"   ⚠️ Moon Dev - Binance tape failed: {type(e).__name__}", "yellow"))
+            break
+        if not isinstance(rows, list) or not rows:
+            break
+        for k in rows:
+            ms, n = k[0], int(k[8])
+            if n <= 0:                      # a second with no trades is not a tick
+                continue
+            o, h, l, c = float(k[1]), float(k[2]), float(k[3]), float(k[4])
+            out.extend([{'t': ms, 'p': o, 'n': n}, {'t': ms + 250, 'p': l, 'n': 0},
+                        {'t': ms + 500, 'p': h, 'n': 0}, {'t': ms + 750, 'p': c, 'n': 0}])
+        if len(rows) < 1000:
+            break
+        end = rows[0][0] - 1
+    out.sort(key=lambda t: t['t'])
+    return out
+
+
 def get_btc_ticks(lookback="1h", limit=10000):
-    """🌙 Moon Dev - Raw BTC ticks [{'t': ms, 'p': price}, ...] or [] on a dead feed."""
-    resp = get_api().get_ticks("BTC", lookback, limit=limit)
-    if not resp or not isinstance(resp, dict):
-        return []
-    return resp.get('ticks', []) or []
+    """🌙 Moon Dev - Raw BTC ticks [{'t': ms, 'p': price}, ...] or [] on a dead feed.
+
+    FLIP_BTC_FEED=auto (default) takes the Moon Dev tape when the key is there and
+    falls back to Binance, so the bot runs on a box with no Moon Dev subscription.
+    Pin it with FLIP_BTC_FEED=moondev or =binance. Cached for TICK_CACHE_TTL so one
+    loop does not pull an hour of klines three times over."""
+    now = time.time()
+    if _TICK_CACHE['ticks'] and now - _TICK_CACHE['at'] < TICK_CACHE_TTL:
+        return _TICK_CACHE['ticks']
+
+    ticks = []
+    if BTC_FEED in ('auto', 'moondev') and _moondev_available():
+        resp = get_api().get_ticks("BTC", lookback, limit=limit)
+        if resp and isinstance(resp, dict):
+            ticks = resp.get('ticks', []) or []
+    elif BTC_FEED == 'moondev':
+        print(colored("❌ Moon Dev - FLIP_BTC_FEED=moondev but no MOONDEV_API_KEY / api.py", "red"))
+        sys.exit(1)
+
+    if not ticks and BTC_FEED in ('auto', 'binance'):
+        ticks = _binance_ticks(3600)
+
+    _TICK_CACHE.update(at=now, ticks=ticks)
+    return ticks
+
+
+def active_btc_feed():
+    """🌙 Moon Dev - Which tape is actually live, for the startup banner and the log."""
+    if BTC_FEED in ('auto', 'moondev') and _moondev_available():
+        return 'moondev'
+    return 'binance' if BTC_FEED in ('auto', 'binance') else BTC_FEED
 
 
 def _bars_from_ticks(ticks, start_ms, bar_sec=60, n_bars=4):
@@ -358,7 +439,13 @@ def read_window_tape(market_ts):
 
     # 🌙 Moon Dev - tick-rate multiple: is this window busier than the hour?
     elapsed = max(1, int(time.time()) - market_ts)
-    rate_mult = ((len(win_ticks) / elapsed) / (len(ticks) / 3600)) if len(ticks) else 0.0
+    if any('n' in t for t in win_ticks):        # keyless tape: count trades, not ticks
+        win_rate = sum(t.get('n', 0) for t in win_ticks) / elapsed
+        hour_rate = sum(t.get('n', 0) for t in ticks) / 3600
+    else:
+        win_rate = len(win_ticks) / elapsed
+        hour_rate = len(ticks) / 3600
+    rate_mult = (win_rate / hour_rate) if hour_rate else 0.0
 
     return {
         'strike': strike, 'spot': spot, 'cushion': cushion,
@@ -1504,6 +1591,7 @@ def main():
                   f"${MIN_SELL_ASK:.2f} (breakeven {BREAKEVEN_ASK:.4f}), static ${STATIC_SELL_ASK:.2f} until trusted", "white"))
     print(colored(f"   🧠 Brain:          river logistic x2 | trust at {MIN_TRAIN_N} windows, full at "
                   f"{FULL_TRUST_N} | ADWIN drift δ={DRIFT_DELTA}", "white"))
+    print(colored(f"   📈 BTC tape:       {active_btc_feed()} (FLIP_BTC_FEED={BTC_FEED})", "white"))
     print(colored(f"   🎛️  Features:       groups {FEAT.active_groups()} → {len(brain.FEATURES)} inputs", "white"))
     print(colored(f"      {', '.join(brain.FEATURES)}", "cyan"))
     print(colored(f"   💵 Size:           ${BASE_SIZE_USD} flat | min EV {MIN_EV_PER_SHARE*100:.0f}c/share | "

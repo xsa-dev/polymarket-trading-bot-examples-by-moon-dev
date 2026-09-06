@@ -8,3 +8,7 @@ __pycache__/
 *.pyc
 .DS_Store
 data/
+
+# 🌙 Moon Dev - local paper-run artifacts
+run/
+.venv/
